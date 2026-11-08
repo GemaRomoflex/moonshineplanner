@@ -1,0 +1,106 @@
+/* Moonshine Flow Manager - Industrial UI Styles */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --accent-amber: #f59e0b;
+  --accent-emerald: #10b981;
+  --accent-rose: #ef4444;
+  --shift-1-bg: #eff6ff;
+  --shift-1-border: #93c5fd;
+  --shift-2-bg: #fef3c7;
+  --shift-2-border: #fcd34d;
+  --shift-3-bg: #ede9fe;
+  --shift-3-border: #c4b5fd;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Shift Badges */
+.badge-shift-1 {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+.badge-shift-2 {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.badge-shift-3 {
+  background-color: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+}
+
+/* Priority Indicator Ribbons */
+.priority-critica {
+  border-left: 5px solid #ef4444 !important;
+  background-color: #fef2f2;
+}
+.priority-alta {
+  border-left: 5px solid #f97316 !important;
+  background-color: #fff7ed;
+}
+.priority-normal {
+  border-left: 5px solid #3b82f6 !important;
+  background-color: #eff6ff;
+}
+.priority-baja {
+  border-left: 5px solid #64748b !important;
+  background-color: #f8fafc;
+}
+
+/* Smooth modal & tab animations */
+.tab-content {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Print layout for schedule */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .card-print {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+}

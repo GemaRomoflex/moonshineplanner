@@ -1,0 +1,2783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moonshine Flow Manager — Control de Pedidos y Planificación 24/7</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen overflow-hidden flex">
+
+  <!-- ================= BARRA LATERAL IZQUIERDA (SIDEBAR) ================= -->
+  <aside id="appSidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 h-full z-30 select-none">
+    <!-- Logo Compacto -->
+    <div class="h-14 px-4 flex items-center justify-between border-b border-slate-800/80 shrink-0">
+      <div class="flex items-center space-x-2.5">
+        <div class="bg-blue-600 text-white w-8 h-8 rounded-lg shadow flex items-center justify-center font-black text-sm tracking-wider">
+          MS
+        </div>
+        <div>
+          <div class="flex items-center space-x-1.5">
+            <span class="font-extrabold text-sm text-white tracking-tight">MOONSHINE</span>
+            <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 text-[10px] px-1.5 py-0.2 rounded font-bold flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="headerLiveStatus">24/7</span>
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-none mt-0.5">Axiom Lean Flow Manager</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menú Seccionado por Categorías -->
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      
+      <!-- SECCIÓN 1: SOLICITUDES -->
+      <div>
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">Pedidos</p>
+        <div class="space-y-1">
+          <button onclick="switchTab('tab-solicitud')" id="nav-solicitud" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-white bg-blue-600 shadow-xs transition">
+            <i data-lucide="plus-circle" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Nuevo Pedido</span>
+          </button>
+          <button onclick="switchTab('tab-inbox')" id="nav-inbox" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <div class="flex items-center space-x-2.5 truncate">
+              <i data-lucide="inbox" class="w-4 h-4 shrink-0"></i>
+              <span class="truncate">Bandeja de Entrada</span>
+            </div>
+            <span id="badgeInboxCount" class="hidden bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 font-black rounded-full">0</span>
+          </button>
+          <button onclick="switchTab('tab-pedidos')" id="nav-pedidos" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <i data-lucide="list-ordered" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Historial</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: PRODUCCIÓN Y TALLER -->
+      <div>
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">Producción</p>
+        <div class="space-y-1">
+          <button onclick="switchTab('tab-planificador')" id="nav-planificador" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <i data-lucide="calendar" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Plan Semanal 24/7</span>
+          </button>
+          <button onclick="switchTab('tab-taller')" id="nav-taller" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <div class="flex items-center space-x-2.5 truncate">
+              <i data-lucide="hammer" class="w-4 h-4 shrink-0"></i>
+              <span class="truncate">Terminal de Técnico</span>
+            </div>
+            <span id="badgeTallerCount" class="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 font-black rounded-full">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: ADMINISTRACIÓN -->
+      <div>
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">Administración</p>
+        <div class="space-y-1">
+          <button onclick="switchTab('tab-tecnicos')" id="nav-tecnicos" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Técnicos y Turnos</span>
+          </button>
+          <button onclick="switchTab('tab-catalogo')" id="nav-catalogo" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <i data-lucide="box" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Catálogo SketchUp</span>
+          </button>
+          <button onclick="switchTab('tab-config')" id="nav-config" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <i data-lucide="mail" class="w-4 h-4 shrink-0"></i>
+            <span class="truncate">Correo y Excel</span>
+          </button>
+        </div>
+      </div>
+
+    </nav>
+
+    <!-- Pie de Barra Lateral: Guía Rápida + Turno En Vivo -->
+    <div class="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2 shrink-0">
+      <button onclick="openModal('modalOfficialGuide')" class="w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 text-blue-300 hover:text-white hover:bg-blue-900/50 transition border border-blue-500/30 bg-blue-950/40">
+        <i data-lucide="message-square" class="w-3.5 h-3.5 text-blue-400 shrink-0"></i>
+        <span>Mensaje WhatsApp</span>
+      </button>
+
+      <div class="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-xl border border-slate-800">
+        <div class="truncate">
+          <p class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Turno Actual</p>
+          <p id="headerCurrentShift" class="text-xs font-bold text-amber-400 truncate">Calculando...</p>
+        </div>
+        <i data-lucide="clock" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= ÁREA DE TRABAJO DERECHA ================= -->
+  <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+    <!-- Barra Superior Ultradelgada (Contextual) -->
+    <header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-20">
+      <div class="truncate">
+        <h1 id="topBarViewTitle" class="text-sm font-black text-slate-900 truncate">Nuevo Pedido</h1>
+        <p id="topBarViewSubtitle" class="hidden"></p>
+      </div>
+      <div class="flex items-center space-x-2 shrink-0">
+        <button onclick="triggerAutoPlan()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5" title="Actualizar Plan 24/7">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Actualizar Plan</span>
+        </button>
+        <button onclick="switchTab('tab-solicitud')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Nuevo Pedido</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal con Scroll Independiente -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+      <div class="max-w-7xl mx-auto">
+
+        <!-- NOTIFICACIONES TOAST -->
+        <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 1: NUEVO PEDIDO -->
+    <!-- ======================================================== -->
+    <section id="tab-solicitud" class="tab-content">
+      <div class="max-w-3xl mx-auto">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="border-b border-slate-100 pb-4 mb-5 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-blue-600"></i>
+              <span>Nuevo Pedido</span>
+            </h2>
+            <span class="text-xs font-mono bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-bold border border-blue-200" id="nextFolioBadge">
+              Folio: MSH-2026-006
+            </span>
+          </div>
+
+          <!-- Aviso de Solicitudes Pendientes en Bandeja -->
+          <div id="inboxNotificationBanner" class="hidden mb-5 bg-blue-600 text-white rounded-xl p-3 shadow-sm flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+              <i data-lucide="mail" class="w-4 h-4 text-white"></i>
+              <p id="inboxBannerText" class="text-xs font-semibold">Solicitudes pendientes en la bandeja.</p>
+            </div>
+            <button onclick="switchTab('tab-inbox')" class="bg-white text-blue-800 hover:bg-blue-50 text-xs font-bold px-3 py-1 rounded-lg transition">
+              Ver Bandeja
+            </button>
+          </div>
+
+          <form id="orderForm" onsubmit="handleCreateOrder(event)" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Solicitante *</label>
+                <input type="text" id="inputSolicitante" required placeholder="Nombre del solicitante" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Área *</label>
+                <select id="inputArea" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                  <option value="">Selecciona el área...</option>
+                  <option value="Receiving">Receiving</option>
+                  <option value="Kitting">Kitting</option>
+                  <option value="Warehouse">Warehouse</option>
+                  <option value="Materiales">Materiales</option>
+                  <option value="VLP">VLP</option>
+                  <option value="P12">P12</option>
+                  <option value="ME">ME</option>
+                  <option value="IQC">IQC</option>
+                  <option value="Tooling">Tooling</option>
+                  <option value="Shipping">Shipping</option>
+                  <option value="Línea SMT 01">Línea SMT 01</option>
+                  <option value="Línea SMT 02">Línea SMT 02</option>
+                  <option value="Ensamble Backend">Ensamble Backend</option>
+                  <option value="Calidad & NPI">Calidad & NPI</option>
+                  <option value="Mantenimiento">Mantenimiento</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Estructura Requerida *</label>
+                <select id="inputEstructura" onchange="onSelectStructureChange()" required class="w-full p-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                  <!-- Se llena dinámicamente con catálogo -->
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Tipo *</label>
+                <select id="inputTipoTrabajo" required class="w-full p-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white font-semibold">
+                  <option value="Estructura Nueva" selected>🏗️ Estructura Nueva</option>
+                  <option value="Arreglo / Modificación / Desarme">🔧 Arreglo / Desarme</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Cantidad *</label>
+                <input type="number" id="inputCantidad" min="1" max="50" value="1" onchange="updateCalculatedHours()" class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Horas Estimadas</label>
+                <input type="text" id="inputHorasCalculadas" readonly value="4.5 hrs" class="w-full p-2 text-sm bg-slate-100 font-mono font-bold text-slate-800 border border-slate-200 rounded-lg">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Fecha Requerida</label>
+                <input type="date" id="inputFechaRequerida" class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Prioridad *</label>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <label class="cursor-pointer border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 rounded-xl py-2.5 px-3 flex items-center justify-center text-center transition">
+                  <input type="radio" name="prioridad" value="Crítica" class="sr-only" onchange="highlightPriority(this)">
+                  <span class="font-extrabold text-xs uppercase flex items-center gap-1">🚨 Urgente</span>
+                </label>
+                <label class="cursor-pointer border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl py-2.5 px-3 flex items-center justify-center text-center transition">
+                  <input type="radio" name="prioridad" value="Alta" class="sr-only" onchange="highlightPriority(this)">
+                  <span class="font-extrabold text-xs uppercase flex items-center gap-1">⚡ Alta</span>
+                </label>
+                <label class="cursor-pointer border-2 border-blue-600 bg-blue-50 text-blue-900 rounded-xl py-2.5 px-3 flex items-center justify-center text-center transition ring-2 ring-blue-400">
+                  <input type="radio" name="prioridad" value="Normal" checked class="sr-only" onchange="highlightPriority(this)">
+                  <span class="font-extrabold text-xs uppercase flex items-center gap-1">🔷 Media</span>
+                </label>
+                <label class="cursor-pointer border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl py-2.5 px-3 flex items-center justify-center text-center transition">
+                  <input type="radio" name="prioridad" value="Baja" class="sr-only" onchange="highlightPriority(this)">
+                  <span class="font-extrabold text-xs uppercase flex items-center gap-1">⚪ Baja</span>
+                </label>
+              </div>
+            </div>
+
+            <input type="hidden" id="inputCanalEntrada" value="Portal Web Moonshine">
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Notas (Opcional)</label>
+              <input type="text" id="inputNotas" placeholder="Dimensiones o detalles adicionales..." class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+            </div>
+
+            <div class="pt-2">
+              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Guardar Pedido</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA: BANDEJA DE ENTRADA                              -->
+    <!-- ======================================================== -->
+    <section id="tab-inbox" class="tab-content hidden">
+      <div class="space-y-4">
+
+        <!-- Barra Única Compacta de Acciones -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+              <i data-lucide="inbox" class="w-5 h-5 text-blue-600"></i>
+              <span>Bandeja de Solicitudes</span>
+            </h2>
+            <label class="flex items-center space-x-1.5 text-xs font-semibold text-slate-600 cursor-pointer bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+              <input type="checkbox" id="checkAutoScan" checked onchange="OutlookSyncManager.setAutoScanEnabled(this.checked)" class="w-3.5 h-3.5 text-blue-600 rounded">
+              <span>Auto-escaneo</span>
+            </label>
+            <select id="selectScanInterval" onchange="OutlookSyncManager.setIntervalMinutes(this.value)" class="hidden">
+              <option value="5" selected>5m</option>
+            </select>
+            <span id="outlookTimerDisplay" class="hidden"></span>
+            <span id="outlookScanStatus" class="hidden"></span>
+            <span id="displayBossUrl" class="hidden"></span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="connectorStatusBadge" class="hidden text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Outlook Conectado</span>
+            </span>
+            <a id="btnDownloadConnector" href="Instalar_Sincronizador_Outlook.bat" download="Instalar_Sincronizador_Outlook.bat" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl border border-emerald-300 transition flex items-center space-x-1.5" title="Descarga y ábrelo 1 sola vez en la laptop del supervisor para activar la lectura automática de Outlook">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-600"></i>
+              <span>Activar Auto-Lectura Outlook (1 vez)</span>
+            </a>
+            <button onclick="openModal('modalPasteEmail')" class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl border border-blue-200 transition flex items-center space-x-1.5">
+              <i data-lucide="clipboard-paste" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>+ Pegar Solicitud</span>
+            </button>
+            <button onclick="OutlookSyncManager.loadSampleEmail()" class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-300 transition flex items-center space-x-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Ejemplo Demo</span>
+            </button>
+            <button id="btnScanOutlookNow" onclick="OutlookSyncManager.scanNow(true)" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Escanear Outlook</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Palabras Clave de Búsqueda -->
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5 mr-1">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>Palabras clave:</span>
+            </span>
+            <div id="outlookKeywordsPills" class="flex flex-wrap items-center gap-1.5"></div>
+          </div>
+          <button onclick="OutlookSyncManager.resetKeywords()" class="text-[11px] text-blue-600 hover:text-blue-800 font-semibold hover:underline">
+            Restablecer
+          </button>
+        </div>
+
+        <!-- Estado Vacío Limpio -->
+        <div id="outlookEmptyState" class="hidden bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="inbox" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-sm font-bold text-slate-800 mb-4">No hay solicitudes pendientes</h3>
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <button onclick="openModal('modalPasteEmail')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+              <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+              <span>+ Pegar Solicitud</span>
+            </button>
+            <button onclick="OutlookSyncManager.loadSampleEmail()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl border border-slate-300 transition flex items-center space-x-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Cargar Ejemplo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenedor de Tarjetas de Correos Detectados -->
+        <div id="outlookEmailsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 2: PLAN SEMANAL 24/7                             -->
+    <!-- ======================================================== -->
+    <section id="tab-planificador" class="tab-content hidden space-y-5">
+      
+      <!-- Métricas KPI Semanales -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p class="text-[11px] text-slate-500 font-bold uppercase">Pedidos Activos</p>
+          <h3 id="kpiTotalOrders" class="text-2xl font-black text-slate-900 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p class="text-[11px] text-slate-500 font-bold uppercase">Horas Programadas</p>
+          <h3 id="kpiTotalHours" class="text-2xl font-black text-blue-600 mt-1">0 h</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p class="text-[11px] text-slate-500 font-bold uppercase">Horas Disponibles</p>
+          <h3 id="kpiCapacityRemaining" class="text-2xl font-black text-emerald-600 mt-1">0 h</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p class="text-[11px] text-slate-500 font-bold uppercase">Urgentes</p>
+          <h3 id="kpiCriticalCount" class="text-2xl font-black text-red-600 mt-1">0</h3>
+        </div>
+      </div>
+
+      <!-- Barra Única: Navegador de Semanas + Acciones -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-2">
+          <button onclick="changePlanWeek(-1)" class="p-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 transition" title="Semana Anterior">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <div class="text-center px-3">
+            <span class="text-[11px] uppercase font-extrabold tracking-wider text-blue-600 block" id="planWeekLabel">Semana 1 (Actual)</span>
+            <span class="text-xs font-black text-slate-900" id="planWeekDateRange">Calculando...</span>
+          </div>
+          <button onclick="changePlanWeek(1)" class="p-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 transition" title="Semana Siguiente">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <span class="bg-blue-50 text-blue-800 text-xs font-bold px-3 py-1 rounded-xl border border-blue-200 ml-2 hidden sm:inline-block" id="planBacklogBadge">
+            2 Semanas
+          </span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="triggerAutoPlan()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            <span>Actualizar Plan</span>
+          </button>
+          <button onclick="switchTab('tab-config')" class="bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5">
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            <span>Correo Diario</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuadrícula Semanal (7 Columnas de Lunes a Domingo) -->
+      <div class="overflow-x-auto pb-2">
+        <div id="weeklyScheduleGrid" class="grid grid-cols-7 gap-3 min-w-[1100px]">
+          <!-- Se inyectan las 7 columnas con app.js -->
+        </div>
+      </div>
+
+      <!-- EFICIENCIA POR TÉCNICO -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="trending-up" class="w-5 h-5 text-indigo-600"></i>
+            <span>Eficiencia por Técnico</span>
+          </h3>
+          <div class="flex items-center space-x-2">
+            <span class="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>&gt;90%</span>
+            </span>
+            <span class="inline-flex items-center space-x-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>75-89%</span>
+            </span>
+            <span class="inline-flex items-center space-x-1 text-[11px] font-bold text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span>&lt;75%</span>
+            </span>
+          </div>
+        </div>
+
+        <div id="techEfficiencyGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 3: TERMINAL DE TÉCNICO                           -->
+    <!-- ======================================================== -->
+    <section id="tab-taller" class="tab-content hidden space-y-5">
+      
+      <!-- Barra Compacta de Técnico y Turno -->
+      <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-md border border-slate-800 space-y-4">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <span class="text-slate-400 text-xs font-mono" id="tallerCurrentDate">Lunes</span>
+            <h2 id="tallerShiftTitle" class="text-xl font-black text-white">Turno 1 (7:00 AM - 3:00 PM)</h2>
+            <p id="tallerShiftSubtitle" class="hidden"></p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5 bg-slate-800/90 p-2 rounded-2xl border border-slate-700/80">
+            <div class="flex items-center space-x-2">
+              <label for="selectFloorTech" class="text-xs text-slate-300 font-bold pl-1">Técnico:</label>
+              <select id="selectFloorTech" onchange="setFloorActiveTech(this.value)" class="bg-slate-900 text-white text-xs font-bold py-1.5 px-3 rounded-xl border border-slate-600 outline-none focus:ring-2 focus:ring-emerald-400">
+              </select>
+            </div>
+
+            <button onclick="openAddOvertimeModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black px-3 py-1.5 rounded-xl shadow transition flex items-center space-x-1">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+              <span>+ Tiempo Extra</span>
+            </button>
+
+            <div class="flex items-center space-x-1 border-l border-slate-700 pl-2">
+              <button onclick="setTallerShiftFilter(1)" id="btnFilterT1" class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-600 text-white">T1</button>
+              <button onclick="setTallerShiftFilter(2)" id="btnFilterT2" class="px-2.5 py-1 text-[11px] font-bold rounded-lg text-slate-300 hover:bg-slate-700">T2</button>
+              <button onclick="setTallerShiftFilter(3)" id="btnFilterT3" class="px-2.5 py-1 text-[11px] font-bold rounded-lg text-slate-300 hover:bg-slate-700">T3</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Progreso del Técnico -->
+        <div id="floorTechGoalBanner" class="bg-slate-800/70 rounded-xl p-3.5 border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div id="floorTechAvatar" class="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 font-black text-sm flex items-center justify-center">
+              JP
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h3 id="floorTechName" class="font-bold text-white text-sm">Juan Pérez</h3>
+                <span id="floorTechSpecBadge" class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 font-bold px-2 py-0.5 rounded-full">🏗️ Fabricación</span>
+              </div>
+              <p id="floorTechSubtext" class="text-[11px] text-slate-400">Meta: 7.5 hrs</p>
+            </div>
+          </div>
+
+          <div class="w-full md:w-64">
+            <div class="flex justify-between items-center text-xs mb-1">
+              <span class="text-slate-300 font-semibold" id="floorTechGoalProgressLabel">Avance del Turno:</span>
+              <span class="font-mono font-bold text-emerald-400" id="floorTechGoalProgressValue">0.0h / 7.5h (0%)</span>
+            </div>
+            <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-700">
+              <div id="floorTechGoalBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Órdenes -->
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center space-x-2">
+          <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i>
+          <span id="tallerSectionTitle">Tareas Asignadas</span>
+        </h3>
+
+        <div id="tallerOrdersList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 4: HISTORIAL DE PEDIDOS                          -->
+    <!-- ======================================================== -->
+    <section id="tab-pedidos" class="tab-content hidden space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="list" class="w-5 h-5 text-blue-600"></i>
+            <span>Historial de Pedidos</span>
+          </h2>
+          <div class="flex items-center space-x-2 w-full sm:w-auto">
+            <input type="text" id="orderSearchInput" onkeyup="filterOrdersTable()" placeholder="Buscar folio, área, estructura..." class="px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64">
+            <button onclick="SharePointBridge.exportToSharePointCsv()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center space-x-1 shrink-0">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Exportar Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-bold tracking-wider text-[11px]">
+                <th class="py-3 px-3">Folio</th>
+                <th class="py-3 px-3">Solicitante</th>
+                <th class="py-3 px-3">Área</th>
+                <th class="py-3 px-3">Estructura</th>
+                <th class="py-3 px-3 text-center">Cant.</th>
+                <th class="py-3 px-3 text-center">Horas</th>
+                <th class="py-3 px-3 text-center">Prioridad</th>
+                <th class="py-3 px-3 text-center">Estado</th>
+                <th class="py-3 px-3">Entrega Estimada</th>
+                <th class="py-3 px-3 text-center">Ver</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="divide-y divide-slate-100">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA: TÉCNICOS Y TURNOS                               -->
+    <!-- ======================================================== -->
+    <section id="tab-tecnicos" class="tab-content hidden space-y-5">
+
+      <!-- Barra Resumen de Plantilla + Botones -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs">
+          <span class="text-[10px] font-bold text-slate-400 uppercase">Total Técnicos</span>
+          <p id="metricTotalTechs" class="text-xl font-black text-slate-900 mt-0.5">6</p>
+        </div>
+        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs">
+          <span class="text-[10px] font-bold text-blue-600 uppercase">T1 (7 AM - 3 PM)</span>
+          <p id="metricT1Techs" class="text-xl font-black text-blue-600 mt-0.5">2</p>
+        </div>
+        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs">
+          <span class="text-[10px] font-bold text-amber-600 uppercase">T2 (3 PM - 11 PM)</span>
+          <p id="metricT2Techs" class="text-xl font-black text-amber-600 mt-0.5">2</p>
+        </div>
+        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs">
+          <span class="text-[10px] font-bold text-purple-600 uppercase">T3 (11 PM - 7 AM)</span>
+          <p id="metricT3Techs" class="text-xl font-black text-purple-600 mt-0.5">2</p>
+        </div>
+        <div class="bg-white rounded-xl p-3.5 border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
+          <span class="text-[10px] font-bold text-emerald-600 uppercase">Capacidad Semanal</span>
+          <p id="metricWeeklyCapacityHours" class="text-xl font-black text-emerald-600 mt-0.5">270.0 h</p>
+        </div>
+      </div>
+
+      <!-- CALENDARIO SEMANAL DE TÉCNICOS POR TURNO -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+              <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-600"></i>
+              <span>Rol Semanal de Turnos</span>
+            </h3>
+            <p class="text-xs text-slate-500">Clic sobre un técnico para cambiar entre <strong>🟢 Trabajando</strong> o <strong>😴 Descanso</strong>.</p>
+          </div>
+          <button onclick="resetDefaultRosterSchedule()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-3 rounded-xl border border-slate-300 transition flex items-center space-x-1.5">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Restablecer Rol</span>
+          </button>
+        </div>
+
+        <div id="rosterCalendarContainer" class="overflow-x-auto">
+        </div>
+      </div>
+
+      <!-- PLANTILLA DE TÉCNICOS -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+            <span>Técnicos Registrados</span>
+          </h3>
+          <button onclick="openModal('modalAddTechnician')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            <span>+ Nuevo Técnico</span>
+          </button>
+        </div>
+
+        <div id="techniciansCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 5: CATÁLOGO Y MODELOS SKETCHUP                   -->
+    <!-- ======================================================== -->
+    <section id="tab-catalogo" class="tab-content hidden space-y-5">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+          <i data-lucide="box" class="w-5 h-5 text-blue-600"></i>
+          <span>Catálogo de Estructuras</span>
+        </h2>
+        <button onclick="openNewStructureModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>+ Nueva Estructura</span>
+        </button>
+      </div>
+
+      <div id="catalogGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- PESTAÑA 6: CORREO Y EXCEL                                -->
+    <!-- ======================================================== -->
+    <section id="tab-config" class="tab-content hidden space-y-5">
+      
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+        <div class="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="mail" class="w-5 h-5 text-blue-600"></i>
+            <span>Correo Diario del Plan (Outlook)</span>
+          </h2>
+
+          <div class="flex items-center space-x-2">
+            <select id="emailDaySelector" onchange="updateEmailPreview()" class="text-xs font-bold p-2 border border-slate-300 rounded-lg bg-white outline-none">
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+            <button onclick="copyEmailHtmlToClipboard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>Copiar Correo</span>
+            </button>
+            <button onclick="openMailtoClient()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>Abrir Outlook</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 overflow-x-auto">
+          <div id="emailPreviewContainer" class="bg-white p-4 rounded-lg shadow-xs border border-slate-200">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+        <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600"></i>
+          <span>Importar / Exportar CSV (SharePoint)</span>
+        </h3>
+        <div class="flex items-center space-x-2">
+          <button onclick="SharePointBridge.exportToSharePointCsv()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Descargar CSV</span>
+          </button>
+          <label class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 cursor-pointer">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            <span>Cargar CSV</span>
+            <input type="file" id="csvFileInput" accept=".csv" onchange="handleImportCsv(event)" class="hidden">
+          </label>
+          <input type="hidden" id="inputWebhookUrl" value="">
+        </div>
+      </div>
+
+    </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODAL: NUEVA ESTRUCTURA AL CATÁLOGO ================= -->
+  <div id="modalStructure" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+          <i data-lucide="box" class="w-5 h-5 text-blue-600"></i>
+          <span>Agregar Estructura al Catálogo</span>
+        </h3>
+        <button onclick="closeModal('modalStructure')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="newStructureForm" onsubmit="handleCreateStructure(event)" class="space-y-4 pt-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Nombre de la Estructura *</label>
+          <input type="text" id="newStructName" required placeholder="Ej. Carro Secuenciador de Arneses" class="w-full p-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Categoría</label>
+            <input type="text" id="newStructCategory" placeholder="Ej. Material Handling" value="Material Handling" class="w-full p-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Tiempo Estándar (Horas) *</label>
+            <input type="number" id="newStructHours" step="0.5" min="0.5" max="100" required value="4.0" class="w-full p-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Código SketchUp (.skp)</label>
+            <input type="text" id="newStructSketchup" placeholder="Ej. MSH-SKP-CART-04" class="w-full p-2 text-sm border border-slate-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Precio Ref. ($ USD)</label>
+            <input type="number" id="newStructPrice" step="1" min="0" value="160" class="w-full p-2 text-sm border border-slate-300 rounded-lg font-bold outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-700 mb-1">URL 3D de SketchUp Web (app.sketchup.com)</label>
+          <input type="url" id="newStructSketchupUrl" placeholder="https://app.sketchup.com/share/tc/northAmerica/..." class="w-full p-2 text-xs border border-slate-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Descripción / Especificaciones</label>
+          <textarea id="newStructDesc" rows="2" placeholder="Detalles de dimensiones, tubos, accesorios..." class="w-full p-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="pt-3 flex justify-end space-x-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalStructure')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">Guardar Estructura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DETALLES TÉCNICOS DE LA ORDEN ================= -->
+  <div id="modalOrderDetails" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-start pb-3 border-b border-slate-100">
+        <div>
+          <span id="modalDetailFolio" class="text-xs font-mono font-bold text-blue-600">MSH-2026-001</span>
+          <h3 id="modalDetailTitle" class="font-bold text-lg text-slate-900">Detalles de Estructura</h3>
+        </div>
+        <button onclick="closeModal('modalOrderDetails')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="py-4 space-y-4 text-xs" id="modalDetailBody">
+        <!-- Inyectado dinámicamente -->
+      </div>
+
+      <div class="pt-3 flex justify-between items-center border-t border-slate-100">
+        <span class="text-xs text-slate-500">Moonshine Axiom Shop Floor</span>
+        <button onclick="closeModal('modalOrderDetails')" class="px-4 py-2 text-xs font-bold bg-slate-800 text-white rounded-lg">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: REGISTRAR NUEVO TÉCNICO ================= -->
+  <div id="modalAddTechnician" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+          <i data-lucide="user-plus" class="w-5 h-5 text-emerald-600"></i>
+          <span>Registrar Nuevo Técnico</span>
+        </h3>
+        <button onclick="closeModal('modalAddTechnician')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="addTechnicianForm" onsubmit="handleCreateTechnician(event)" class="space-y-4 pt-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre Completo *</label>
+          <input type="text" id="techInputName" required placeholder="Ej. Carlos Mendoza López" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Turno Habitual *</label>
+            <select id="techInputShift" class="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="1">Turno 1 (7:00 AM - 3:00 PM)</option>
+              <option value="2">Turno 2 (3:00 PM - 11:00 PM)</option>
+              <option value="3">Turno 3 (11:00 PM - 7:00 AM)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">No. Empleado / ID</label>
+            <input type="text" id="techInputId" placeholder="Ej. TEC-007 (Auto)" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Especialidad de Trabajo *</label>
+            <select id="techInputSpecialty" class="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="Estructuras Nuevas" selected>🏗️ Estructuras Nuevas (Fabricación)</option>
+              <option value="Arreglos / Desarme">🔧 Arreglos / Desarme (Rework)</option>
+              <option value="Flexible">🔄 Flexible (Ambos / Apoyo)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Meta Horas / Turno</label>
+            <input type="number" id="techInputGoalHours" step="0.5" min="1" max="16" value="7.5" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Puesto / Rol Nominal</label>
+          <input type="text" id="techInputRole" value="Técnico de Ensamble Moonshine" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <p class="text-[11px] text-slate-500 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
+          ✦ El nuevo técnico se asignará automáticamente a su turno base en el calendario y aumentará la capacidad de ensamble en <strong>+7.5 hrs</strong> por cada turno que trabaje.
+        </p>
+
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalAddTechnician')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Guardar Técnico</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: EDITAR TÉCNICO ================= -->
+  <div id="modalEditTechnician" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-blue-600"></i>
+          <span>Editar Datos del Técnico</span>
+        </h3>
+        <button onclick="closeModal('modalEditTechnician')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="editTechnicianForm" onsubmit="handleEditTechnicianSubmit(event)" class="space-y-4 pt-4">
+        <input type="hidden" id="editTechHiddenId">
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre Completo *</label>
+          <input type="text" id="editTechInputName" required class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Turno Habitual *</label>
+            <select id="editTechInputShift" class="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="1">Turno 1 (7:00 AM - 3:00 PM)</option>
+              <option value="2">Turno 2 (3:00 PM - 11:00 PM)</option>
+              <option value="3">Turno 3 (11:00 PM - 7:00 AM)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">ID</label>
+            <input type="text" id="editTechInputIdDisplay" disabled class="w-full text-xs p-2.5 border border-slate-200 bg-slate-100 text-slate-500 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Especialidad de Trabajo *</label>
+            <select id="editTechInputSpecialty" class="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="Estructuras Nuevas">🏗️ Estructuras Nuevas (Fabricación)</option>
+              <option value="Arreglos / Desarme">🔧 Arreglos / Desarme (Rework)</option>
+              <option value="Flexible">🔄 Flexible (Ambos / Apoyo)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Meta Horas / Turno</label>
+            <input type="number" id="editTechInputGoalHours" step="0.5" min="1" max="16" value="7.5" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Puesto / Rol Nominal</label>
+          <input type="text" id="editTechInputRole" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalEditTechnician')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Actualizar Datos</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: PEGAR CORREO O SOLICITUD ================= -->
+  <div id="modalPasteEmail" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+          <i data-lucide="clipboard-paste" class="w-5 h-5 text-blue-600"></i>
+          <span>Pegar Correo o Solicitud Recibida</span>
+        </h3>
+        <button onclick="closeModal('modalPasteEmail')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="pasteEmailForm" onsubmit="handlePasteEmailSubmit(event)" class="space-y-4 pt-4">
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Pega el texto de cualquier correo de Outlook o mensaje de Teams/WhatsApp recibido. La app extraerá automáticamente el solicitante, palabras clave, área y estructura, y la agregará a la lista para revisión y aprobación del supervisor.
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Contenido del Correo o Mensaje *</label>
+          <textarea id="pasteEmailText" rows="6" required placeholder="Ejemplo:
+De: Carlos Mendoza (Línea SMT 02)
+Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil tubular para SMT 02 por arranque de nuevo modelo este jueves." class="w-full text-xs p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-sans"></textarea>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalPasteEmail')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Analizar y Agregar a la Bandeja</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: GUÍA OFICIAL DE SOLICITUDES & WHATSAPP EXPRESS ================= -->
+  <div id="modalOfficialGuide" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-2.5">
+          <div class="p-2.5 bg-blue-100 text-blue-700 rounded-2xl">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-lg text-slate-900">Guía Oficial de Solicitudes Moonshine</h3>
+            <p class="text-xs text-slate-500">Procedimiento estándar para solicitar estructuras y educar solicitantes informales</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalOfficialGuide')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="py-4 space-y-5">
+        <!-- Paso a Paso Oficial -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black inline-flex items-center justify-center mb-1.5 text-xs">1</span>
+            <h4 class="font-bold text-slate-900 text-sm">Elegir Modelo en Catálogo</h4>
+            <p class="text-slate-500 mt-1">Revisar el catálogo de 50+ estructuras con modelo 3D SketchUp (.skp) y tiempo estándar de ensamble.</p>
+          </div>
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black inline-flex items-center justify-center mb-1.5 text-xs">2</span>
+            <h4 class="font-bold text-slate-900 text-sm">Registrar Folio Oficial</h4>
+            <p class="text-slate-500 mt-1">Ingresar la solicitud por el portal web o enviando correo formal a la bandeja de Moonshine.</p>
+          </div>
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black inline-flex items-center justify-center mb-1.5 text-xs">3</span>
+            <h4 class="font-bold text-slate-900 text-sm">Aprobación de Supervisión</h4>
+            <p class="text-slate-500 mt-1">El supervisor asigna la prioridad operativa (Crítica, Alta, Normal, Baja) y el tipo de trabajo (Fabricación o Rework).</p>
+          </div>
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black inline-flex items-center justify-center mb-1.5 text-xs">4</span>
+            <h4 class="font-bold text-slate-900 text-sm">Entrega con +3 Días de Holgura</h4>
+            <p class="text-slate-500 mt-1">El motor calcula la fecha real de término sumándole 3 días de colchón para contingencias y calidad garantizada.</p>
+          </div>
+        </div>
+
+        <!-- MÓDULO COPIADOR EXPRESS DE WHATSAPP / TEAMS -->
+        <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100/70 p-4 rounded-2xl border border-emerald-300 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center space-x-1.5">
+              <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+              <span>Copiador Express para WhatsApp / Teams</span>
+            </span>
+            <span class="text-[10px] bg-emerald-200/80 text-emerald-900 font-bold px-2 py-0.5 rounded-full">Respuesta Rápida y Educada</span>
+          </div>
+
+          <p class="text-xs text-emerald-800">
+            ¿Te mandaron un mensaje informal diciendo <em>"oye necesito un carro para mi línea"</em>? Haz clic para copiar la respuesta oficial con el link del portal:
+          </p>
+
+          <div class="bg-white p-3 rounded-xl border border-emerald-200 text-xs font-sans text-slate-700 leading-relaxed shadow-2xs">
+            Hola! 👋 Para que tu solicitud de Moonshine sea tomada en cuenta, programada con los técnicos en el plan de turnos y recibir tu fecha de entrega formal, por favor regístrala por el canal oficial en este enlace:<br>
+            <strong class="text-blue-600">👉 https://gemaromoflex.github.io/moonshineplanner/</strong><br>
+            Una vez registrada, el supervisor le asignará prioridad y recibirás tu confirmación formal por correo. ¡Muchas gracias!
+          </div>
+
+          <button onclick="copyWhatsAppGuideText()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center space-x-2">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copiar Respuesta para WhatsApp / Chat</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex justify-end">
+        <button onclick="closeModal('modalOfficialGuide')" class="px-5 py-2 text-xs font-bold bg-slate-800 text-white rounded-xl">
+          Entendido / Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: REGISTRAR TIEMPO EXTRA (OVERTIME) ================= -->
+  <div id="modalAddOvertime" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-lg text-slate-900 flex items-center space-x-2">
+          <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+          <span>Registrar Tiempo Extra</span>
+        </h3>
+        <button onclick="closeModal('modalAddOvertime')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="addOvertimeForm" onsubmit="handleAddOvertimeSubmit(event)" class="space-y-4 pt-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Técnico *</label>
+          <select id="otInputTechId" required class="w-full text-xs font-bold p-2.5 border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-amber-500">
+            <!-- Se inyecta dinámicamente -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Fecha de la Jornada Extra *</label>
+          <input type="date" id="otInputDate" required class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Horas Extra a Laborar *</label>
+          <div class="flex gap-2 mb-2">
+            <button type="button" onclick="setQuickOtHours(1)" class="flex-1 py-1.5 text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800 rounded-lg hover:bg-amber-100">+1 hr</button>
+            <button type="button" onclick="setQuickOtHours(2)" class="flex-1 py-1.5 text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800 rounded-lg hover:bg-amber-100">+2 hrs</button>
+            <button type="button" onclick="setQuickOtHours(3)" class="flex-1 py-1.5 text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800 rounded-lg hover:bg-amber-100">+3 hrs</button>
+            <button type="button" onclick="setQuickOtHours(4)" class="flex-1 py-1.5 text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800 rounded-lg hover:bg-amber-100">+4 hrs</button>
+          </div>
+          <input type="number" id="otInputHours" step="0.5" min="0.5" max="12" value="2" required class="w-full text-xs font-black p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Motivo / Estructuras a Avanzar</label>
+          <input type="text" id="otInputNotes" placeholder="Ej. Terminar carro FIFO crítico o adelantar backlog" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <p class="text-[11px] text-slate-500 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+          ✦ El tiempo extra se suma de inmediato a la capacidad disponible del turno para jalar pedidos del backlog o concluir trabajo en proceso.
+        </p>
+
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalAddOvertime')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Guardar y Re-Planificar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: REGISTRAR AVANCE PARCIAL ================= -->
+  <div id="modalOrderProgress" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <div>
+          <span class="text-xs font-mono font-bold text-blue-600" id="progOrderFolio">MSH-2026-001</span>
+          <h3 class="font-bold text-lg text-slate-900" id="progOrderTitle">Registrar Avance de Ensamble</h3>
+        </div>
+        <button onclick="closeModal('modalOrderProgress')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="orderProgressForm" onsubmit="handleOrderProgressSubmit(event)" class="space-y-4 pt-4">
+        <input type="hidden" id="progHiddenOrderId">
+
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
+          <div>
+            <span class="text-slate-400 block font-bold uppercase text-[10px]">Horas Totales Estimadas</span>
+            <span class="font-bold text-slate-900 font-mono text-sm" id="progTotalHoursDisplay">4.5 hrs</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block font-bold uppercase text-[10px]">Avance Acumulado</span>
+            <span class="font-bold text-blue-600 font-mono text-sm" id="progCurrentHoursDisplay">0.0 hrs</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Porcentaje Rápido de Avance:</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="setQuickProgressPercent(25)" class="py-1.5 text-xs font-bold border border-slate-300 rounded-lg hover:bg-slate-100">25%</button>
+            <button type="button" onclick="setQuickProgressPercent(50)" class="py-1.5 text-xs font-bold border border-slate-300 rounded-lg hover:bg-slate-100">50%</button>
+            <button type="button" onclick="setQuickProgressPercent(75)" class="py-1.5 text-xs font-bold border border-slate-300 rounded-lg hover:bg-slate-100">75%</button>
+            <button type="button" onclick="setQuickProgressPercent(100)" class="py-1.5 text-xs font-black border border-emerald-400 bg-emerald-50 text-emerald-800 rounded-lg hover:bg-emerald-100">100% ✔</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Horas Trabajadas en este Turno *</label>
+          <input type="number" id="progInputHoursWorked" step="0.5" min="0.5" max="24" value="2.0" required class="w-full text-xs font-black p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <input type="checkbox" id="progCheckComplete" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+          <label for="progCheckComplete" class="text-xs font-bold text-slate-800 cursor-pointer">
+            ¡Estructura completamente concluida! (Listo para Entrega)
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Notas de Turno (Opcional)</label>
+          <input type="text" id="progInputNotes" placeholder="Ej. Falta colocar rodajas; marco tubular completado al 100%" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalOrderProgress')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Actualizar Avance</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script>
+    // ========================================================
+    // CONTROLADOR DE INTERFAZ DE USUARIO (UI CONTROLLER)
+    // ========================================================
+
+    let currentTallerShift = 1;
+    let currentPlanWeek = 1;
+    let activeFloorTechId = MoonshineStore.getActiveTechnicianId() || 'ALL';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Inicializar iconos de Lucide
+      lucide.createIcons();
+
+      // Correr secuenciación inicial si no hay plan
+      if (!MoonshineStore.getPlan()) {
+        SchedulingEngine.runAutoSchedule();
+      }
+
+      // Inicializar Vistas
+      updateLiveShiftHeader();
+      renderStructureSelect();
+      renderCatalogGrid();
+      renderWeeklyGrid();
+      renderTechniciansEfficiency();
+      renderFloorTechSelector();
+      renderTallerFloor();
+      renderOrdersTable();
+      renderRosterMatrix();
+      renderTechniciansManagement();
+      renderRosterCalendar();
+      updateEmailPreview();
+      updateKPIs();
+      updateNextFolioBadge();
+
+      // Inicializar Gestor de Outlook y Sincronización Automática
+      OutlookSyncManager.init();
+
+      // Fijar fecha mínima en selector de fecha a hoy
+      const todayIso = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('inputFechaRequerida');
+      if (dateInput) dateInput.value = todayIso;
+    });
+
+    function openModal(modalId) {
+      const el = document.getElementById(modalId);
+      if (el) el.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    const VIEW_METADATA = {
+      'tab-solicitud': {
+        title: 'Nuevo Pedido de Estructura',
+        subtitle: 'Captura directa de solicitudes para líneas de producción'
+      },
+      'tab-inbox': {
+        title: 'Bandeja de Aprobación (Supervisión)',
+        subtitle: 'Filtra correos de Outlook, asigna prioridad y autoriza su ingreso al Plan Maestro'
+      },
+      'tab-planificador': {
+        title: 'Plan Maestro Semanal 24/7',
+        subtitle: 'Secuenciación automática por prioridad, holgura (+3 días) y eficiencia por técnico'
+      },
+      'tab-taller': {
+        title: 'Terminal Única de Técnico (Piso de Taller)',
+        subtitle: 'Pantalla de operador para reportar avances, órdenes terminadas y horas extra'
+      },
+      'tab-pedidos': {
+        title: 'Historial General de Pedidos',
+        subtitle: 'Búsqueda, seguimiento de estatus y exportación a Excel / CSV'
+      },
+      'tab-tecnicos': {
+        title: 'Plantilla de Técnicos & Rol 24/7',
+        subtitle: 'Administración de turnos, especialidades y calendario semanal de descansos'
+      },
+      'tab-catalogo': {
+        title: 'Catálogo Oficial & Modelos SketchUp',
+        subtitle: 'Estructuras estándar, tiempos de ensamble y referencias 3D (.skp)'
+      },
+      'tab-config': {
+        title: 'Reportes de Correo & Sincronización CSV',
+        subtitle: 'Generador de reporte diario para Outlook e integración con SharePoint'
+      }
+    };
+
+    // Cambiar pestañas desde la barra lateral
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const activeEl = document.getElementById(tabId);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      // Actualizar encabezado contextual superior
+      const meta = VIEW_METADATA[tabId];
+      if (meta) {
+        const titleEl = document.getElementById('topBarViewTitle');
+        const subEl = document.getElementById('topBarViewSubtitle');
+        if (titleEl) titleEl.textContent = meta.title;
+        if (subEl) subEl.textContent = meta.subtitle;
+      }
+
+      // Actualizar estilo botones de la barra lateral
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-white', 'bg-blue-600', 'shadow-xs');
+        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/80');
+      });
+
+      const navBtnId = tabId.replace('tab-', 'nav-');
+      const activeBtn = document.getElementById(navBtnId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800/80');
+        activeBtn.classList.add('text-white', 'bg-blue-600', 'shadow-xs');
+      }
+
+      // Recalcular según vista
+      if (tabId === 'tab-planificador') {
+        renderWeeklyGrid();
+        renderTechniciansEfficiency();
+        updateKPIs();
+      } else if (tabId === 'tab-taller') {
+        renderFloorTechSelector();
+        renderTallerFloor();
+      } else if (tabId === 'tab-pedidos') {
+        renderOrdersTable();
+      } else if (tabId === 'tab-tecnicos') {
+        renderTechniciansManagement();
+        renderRosterCalendar();
+      } else if (tabId === 'tab-config') {
+        updateEmailPreview();
+        renderRosterMatrix();
+      } else if (tabId === 'tab-inbox') {
+        OutlookSyncManager.renderInbox();
+      }
+
+      lucide.createIcons();
+    }
+
+    // Actualizar indicador de turno en tiempo real
+    function updateLiveShiftHeader() {
+      const live = SchedulingEngine.getCurrentRealShift();
+      const headerShift = document.getElementById('headerCurrentShift');
+      if (headerShift) {
+        headerShift.textContent = `${live.shift.label} (${live.dayName})`;
+      }
+
+      currentTallerShift = live.shiftId;
+      const tallerShiftTitle = document.getElementById('tallerShiftTitle');
+      const tallerCurrentDate = document.getElementById('tallerCurrentDate');
+      if (tallerShiftTitle) tallerShiftTitle.textContent = `${live.shift.label} (${live.shift.hours})`;
+      if (tallerCurrentDate) tallerCurrentDate.textContent = live.dateString;
+    }
+
+    // Renderizar select de estructuras en formulario
+    function renderStructureSelect() {
+      const catalog = MoonshineStore.getCatalog();
+      const select = document.getElementById('inputEstructura');
+      if (!select) return;
+
+      select.innerHTML = catalog.map(item => `
+        <option value="${item.id}" data-name="${item.name}" data-hours="${item.standardHours}" data-skp="${item.sketchupCode}">
+          ${item.name}
+        </option>
+      `).join('');
+
+      onSelectStructureChange();
+    }
+
+    // Al cambiar la estructura en el formulario
+    function onSelectStructureChange() {
+      const select = document.getElementById('inputEstructura');
+      if (!select || !select.selectedOptions || !select.selectedOptions[0]) return;
+
+      const opt = select.selectedOptions[0];
+      const hours = parseFloat(opt.getAttribute('data-hours') || '4');
+      const name = opt.getAttribute('data-name') || opt.textContent.trim();
+
+      const nameEl = document.getElementById('previewStructureName');
+      const hoursEl = document.getElementById('previewStructureHours');
+      if (nameEl) nameEl.textContent = name;
+      if (hoursEl) hoursEl.textContent = `${hours} hrs`;
+
+      updateCalculatedHours();
+    }
+
+    // Calcular horas totales según cantidad
+    function updateCalculatedHours() {
+      const select = document.getElementById('inputEstructura');
+      const qtyInput = document.getElementById('inputCantidad');
+      const hoursField = document.getElementById('inputHorasCalculadas');
+
+      if (!select || !qtyInput || !hoursField || !select.selectedOptions[0]) return;
+
+      const hours = parseFloat(select.selectedOptions[0].getAttribute('data-hours') || '4');
+      const qty = parseInt(qtyInput.value || '1', 10);
+      const total = (hours * qty).toFixed(1);
+      hoursField.value = `${total} hrs`;
+    }
+
+    // Destacar botón de prioridad
+    function highlightPriority(radio) {
+      document.querySelectorAll('input[name="prioridad"]').forEach(r => {
+        r.parentElement.classList.remove('ring-2', 'ring-blue-400', 'border-2', 'border-blue-600');
+      });
+      radio.parentElement.classList.add('ring-2', 'ring-blue-400', 'border-2', 'border-blue-600');
+    }
+
+    // Actualizar folio siguiente
+    function updateNextFolioBadge() {
+      const orders = MoonshineStore.getOrders();
+      const nextNum = (orders.length + 1).toString().padStart(3, '0');
+      const badge = document.getElementById('nextFolioBadge');
+      if (badge) badge.textContent = `Folio Siguiente: MSH-2026-${nextNum}`;
+    }
+
+    // Guardar nuevo pedido
+    function handleCreateOrder(e) {
+      e.preventDefault();
+
+      const solicitante = document.getElementById('inputSolicitante').value.trim();
+      const area = document.getElementById('inputArea').value;
+      const selectStruct = document.getElementById('inputEstructura');
+      const estructuraId = selectStruct.value;
+      const estructuraNombre = selectStruct.selectedOptions[0].getAttribute('data-name') || selectStruct.selectedOptions[0].textContent.trim();
+      const sketchupRef = selectStruct.selectedOptions[0].getAttribute('data-skp');
+      const cantidad = parseInt(document.getElementById('inputCantidad').value || '1', 10);
+      const standardHours = parseFloat(selectStruct.selectedOptions[0].getAttribute('data-hours') || '4');
+      const horasEstimadas = parseFloat((standardHours * cantidad).toFixed(1));
+      const fechaRequerida = document.getElementById('inputFechaRequerida').value;
+      const prioridadRadio = document.querySelector('input[name="prioridad"]:checked');
+      const prioridad = prioridadRadio ? prioridadRadio.value : 'Normal';
+      const tipoTrabajoEl = document.getElementById('inputTipoTrabajo');
+      const tipoTrabajo = tipoTrabajoEl ? tipoTrabajoEl.value : 'Estructura Nueva';
+      const canalEntrada = document.getElementById('inputCanalEntrada').value;
+      const notas = document.getElementById('inputNotas').value.trim();
+
+      const orders = MoonshineStore.getOrders();
+      const nextNum = (orders.length + 1).toString().padStart(3, '0');
+      const newFolio = `MSH-2026-${nextNum}`;
+
+      const newOrder = {
+        id: newFolio,
+        solicitante,
+        area,
+        estructuraId,
+        estructuraNombre,
+        tipoTrabajo,
+        cantidad,
+        horasEstimadas,
+        prioridad,
+        estado: 'Pendiente',
+        fechaSolicitud: new Date().toISOString().split('T')[0],
+        fechaRequerida,
+        canalEntrada,
+        sketchupRef,
+        notas,
+        progresoHoras: 0,
+        turnoAsignado: null,
+        diaAsignado: null,
+        tecnicoAsignadoId: null,
+        tecnicoAsignadoNombre: null
+      };
+
+      orders.unshift(newOrder);
+      MoonshineStore.saveOrders(orders);
+
+      // Re-secuenciar automáticamente el plan
+      SchedulingEngine.runAutoSchedule();
+
+      showToast(`Pedido ${newFolio} creado con éxito y programado en turnos.`, 'success');
+      document.getElementById('orderForm').reset();
+      updateNextFolioBadge();
+      renderStructureSelect();
+
+      // Cambiar a la vista de plan para que vean la magia
+      setTimeout(() => switchTab('tab-planificador'), 400);
+    }
+
+    // Navegación de Semanas del Plan Maestro
+    function changePlanWeek(delta) {
+      const plan = MoonshineStore.getPlan() || SchedulingEngine.runAutoSchedule();
+      const maxWeeks = plan.weeksCount || 2;
+      currentPlanWeek += delta;
+      if (currentPlanWeek < 1) currentPlanWeek = 1;
+      if (currentPlanWeek > maxWeeks) currentPlanWeek = maxWeeks;
+      renderWeeklyGrid();
+    }
+
+    // Renderizar Cuadrícula Semanal Multi-Semana (24/7)
+    function renderWeeklyGrid() {
+      const plan = MoonshineStore.getPlan() || SchedulingEngine.runAutoSchedule();
+      const container = document.getElementById('weeklyScheduleGrid');
+      if (!container || !plan.grid) return;
+
+      const maxWeeks = plan.weeksCount || 2;
+      if (currentPlanWeek > maxWeeks) currentPlanWeek = maxWeeks;
+
+      // Actualizar indicadores del navegador de semanas
+      const weekLabelEl = document.getElementById('planWeekLabel');
+      const dateRangeEl = document.getElementById('planWeekDateRange');
+      const backlogBadgeEl = document.getElementById('planBacklogBadge');
+
+      const weekSlots = plan.grid.filter(s => s.weekNum === currentPlanWeek);
+      const firstSlot = weekSlots[0];
+      const lastSlot = weekSlots[weekSlots.length - 1];
+
+      if (weekLabelEl) {
+        weekLabelEl.textContent = `Semana ${currentPlanWeek} ${currentPlanWeek === 1 ? '(En Curso)' : '(Proyección de Backlog)'}`;
+      }
+      if (dateRangeEl && firstSlot && lastSlot) {
+        dateRangeEl.textContent = `${firstSlot.dayName} ${firstSlot.dateShortStr} — ${lastSlot.dayName} ${lastSlot.dateShortStr}`;
+      }
+      if (backlogBadgeEl) {
+        backlogBadgeEl.textContent = `Backlog Total: ${maxWeeks} Semanas Proyectadas (${plan.totalOrdersScheduled} Pedidos)`;
+      }
+
+      container.innerHTML = DAYS_OF_WEEK.map((dayName, dIdx) => {
+        const daySlots = weekSlots.filter(s => s.dayName === dayName);
+
+        const shiftsHtml = daySlots.map(slot => {
+          const capPercent = Math.min(100, Math.round((slot.allocatedHours / slot.totalCapacityHours) * 100));
+          const isFull = capPercent >= 95;
+          const shiftBadgeClass = slot.shiftId === 1 ? 'badge-shift-1' : (slot.shiftId === 2 ? 'badge-shift-2' : 'badge-shift-3');
+
+          const itemsHtml = slot.items.length === 0 
+            ? `<p class="text-[11px] text-slate-400 italic py-2 text-center">Sin asignación (Capacidad Libre)</p>`
+            : slot.items.map(item => {
+                let pBorder = 'border-l-4 border-blue-500';
+                if (item.prioridad === 'Crítica') pBorder = 'border-l-4 border-red-500 bg-red-50/70';
+                else if (item.prioridad === 'Alta') pBorder = 'border-l-4 border-orange-500 bg-orange-50/60';
+                else if (item.prioridad === 'Baja') pBorder = 'border-l-4 border-slate-400';
+
+                const isRework = (item.tipoTrabajo || '').includes('Arreglo') || (item.tipoTrabajo || '').includes('Desarme');
+                const typeBadge = isRework 
+                  ? '<span class="text-[9px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded">🔧 Rework</span>'
+                  : '<span class="text-[9px] font-bold text-blue-800 bg-blue-100 px-1 py-0.2 rounded">🏗️ Nueva</span>';
+
+                return `
+                  <div class="p-2 mb-1.5 rounded-lg border border-slate-200 text-[11px] ${pBorder} shadow-2xs hover:shadow transition bg-white">
+                    <div class="flex justify-between items-start">
+                      <span class="font-mono font-bold text-slate-800">${item.orderId}</span>
+                      <span class="font-bold text-blue-700 font-mono">${item.horasEnEsteTurno}h</span>
+                    </div>
+                    <p class="font-semibold text-slate-900 truncate mt-0.5" title="${item.estructuraNombre}">${item.estructuraNombre}</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-500 truncate mt-0.5">
+                      <span>${item.area}</span>
+                      ${typeBadge}
+                    </div>
+                    <div class="text-[9px] text-indigo-700 font-bold truncate mt-1">
+                      👤 ${item.tecnicoAsignadoNombre || 'Técnico de Turno'}
+                    </div>
+                    ${item.esCarryOver ? `<span class="inline-block mt-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">⚠️ Arrastre</span>` : ''}
+                    ${item.esTermino ? `<span class="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded ml-1">✔ Concluye</span>` : ''}
+                  </div>
+                `;
+              }).join('');
+
+          return `
+            <div class="bg-white rounded-xl border border-slate-200 p-2.5 shadow-2xs">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${shiftBadgeClass}">
+                  ${slot.shiftLabel}
+                </span>
+                <span class="text-[10px] font-mono font-bold text-slate-700" title="${slot.workingNames && slot.workingNames.length > 0 ? slot.workingNames.join(', ') : ''}">
+                  ${slot.techsCount} Téc (${slot.totalCapacityHours}h)
+                </span>
+              </div>
+
+              ${slot.workingNames && slot.workingNames.length > 0 ? `
+                <div class="text-[9px] text-slate-500 font-medium truncate mb-1" title="${slot.workingNames.join(', ')}">
+                  👥 ${slot.workingNames.join(', ')}
+                </div>
+              ` : ''}
+
+              ${slot.overtimeHours > 0 ? `
+                <div class="text-[9px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded mb-1">
+                  ⏱️ +${slot.overtimeHours}h Tiempo Extra
+                </div>
+              ` : ''}
+
+              <!-- Barra de carga del turno -->
+              <div class="w-full bg-slate-100 rounded-full h-1.5 mb-1.5 overflow-hidden">
+                <div class="${isFull ? 'bg-red-500' : 'bg-blue-600'} h-1.5 rounded-full" style="width: ${capPercent}%"></div>
+              </div>
+              <div class="flex justify-between text-[9px] text-slate-400 font-mono mb-2">
+                <span>${slot.allocatedHours.toFixed(1)}h usadas</span>
+                <span>${slot.totalCapacityHours}h cap</span>
+              </div>
+
+              <!-- Lista de ítems -->
+              <div class="space-y-1">
+                ${itemsHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-slate-50 rounded-2xl border border-slate-200 p-2.5 flex flex-col space-y-2.5">
+            <div class="text-center pb-2 border-b border-slate-200">
+              <h4 class="font-black text-sm text-slate-800">${dayName}</h4>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Turnos 1, 2 y 3</p>
+            </div>
+            ${shiftsHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Actualizar métricas KPI del Header / Tablero
+    function updateKPIs() {
+      const orders = MoonshineStore.getOrders();
+      const plan = MoonshineStore.getPlan();
+      const activeOrders = orders.filter(o => o.estado !== 'Entregado' && o.estado !== 'Cancelado');
+
+      const totalHours = activeOrders.reduce((sum, o) => sum + (o.horasEstimadas || 0), 0);
+      const criticalCount = activeOrders.filter(o => o.prioridad === 'Crítica').length;
+
+      let totalCapacity = 0;
+      let totalAllocated = 0;
+      if (plan && plan.grid) {
+        plan.grid.forEach(s => {
+          totalCapacity += (s.totalCapacityHours || 0);
+          totalAllocated += (s.allocatedHours || 0);
+        });
+      }
+      const remainingCap = Math.max(0, totalCapacity - totalAllocated);
+
+      const elTotal = document.getElementById('kpiTotalOrders');
+      if (elTotal) elTotal.textContent = activeOrders.length;
+      const elHours = document.getElementById('kpiTotalHours');
+      if (elHours) elHours.textContent = `${totalHours.toFixed(1)} h`;
+      const elRem = document.getElementById('kpiCapacityRemaining');
+      if (elRem) elRem.textContent = `${remainingCap.toFixed(1)} h`;
+      const elCrit = document.getElementById('kpiCriticalCount');
+      if (elCrit) elCrit.textContent = criticalCount;
+      const elBadge = document.getElementById('badgeTallerCount');
+      if (elBadge) elBadge.textContent = activeOrders.filter(o => o.estado === 'En Fabricación' || o.estado === 'Programado').length;
+    }
+
+    // Disparar re-secuenciación manual
+    function triggerAutoPlan() {
+      SchedulingEngine.runAutoSchedule();
+      renderWeeklyGrid();
+      renderTechniciansEfficiency();
+      renderOrdersTable();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+      showToast('⚡ Plan 24/7 re-secuenciado con éxito según prioridades y capacidad.', 'success');
+    }
+
+    // Renderizar panel de Eficiencia por Técnico para el Supervisor
+    function renderTechniciansEfficiency() {
+      const container = document.getElementById('techEfficiencyGrid');
+      if (!container) return;
+
+      const summary = MoonshineStore.getTechniciansEfficiencySummary();
+      if (!summary || summary.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 italic">No hay técnicos dados de alta.</p>';
+        return;
+      }
+
+      container.innerHTML = summary.map(t => {
+        let badgeColorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+        let barColorClass = 'bg-emerald-500';
+        if (t.statusColor === 'amber') {
+          badgeColorClass = 'bg-amber-100 text-amber-800 border-amber-300';
+          barColorClass = 'bg-amber-500';
+        } else if (t.statusColor === 'red') {
+          badgeColorClass = 'bg-red-100 text-red-800 border-red-300';
+          barColorClass = 'bg-red-500';
+        } else if (t.statusColor === 'slate') {
+          badgeColorClass = 'bg-slate-100 text-slate-700 border-slate-300';
+          barColorClass = 'bg-slate-400';
+        }
+
+        const isRework = (t.especialidad || '').includes('Arreglos') || (t.especialidad || '').includes('Desarme');
+        const specBadge = isRework 
+          ? '<span class="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">🔧 Rework</span>'
+          : '<span class="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">🏗️ Fabricación</span>';
+
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs hover:shadow-sm transition space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                  ${t.name.split(' ').map(n=>n[0]).slice(0,2).join('')}
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900 text-xs">${t.name}</h4>
+                  <p class="text-[10px] text-slate-400 font-mono">T${t.turnoBase} &bull; ${t.techId}</p>
+                </div>
+              </div>
+              ${specBadge}
+            </div>
+
+            <!-- Eficiencia Porcentual -->
+            <div>
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="text-slate-500 text-[11px] font-semibold">Eficiencia Lean:</span>
+                <span class="text-xs font-black px-2 py-0.5 rounded-full border ${badgeColorClass}">
+                  ${t.efficiencyPct}% (${t.statusLabel})
+                </span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div class="${barColorClass} h-2 rounded-full transition-all" style="width: ${Math.min(100, t.efficiencyPct)}%"></div>
+              </div>
+            </div>
+
+            <!-- Métricas detalladas -->
+            <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div>
+                <span class="text-slate-400 block text-[9px] uppercase font-bold">Horas Producidas</span>
+                <span class="font-bold text-slate-900 font-mono">${t.totalProducedHours} hrs</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[9px] uppercase font-bold">Capacidad Total</span>
+                <span class="font-bold text-slate-700 font-mono">${t.totalAvailableHours}h ${t.overtimeHours > 0 ? `(+${t.overtimeHours}h extra)` : ''}</span>
+              </div>
+              <div class="col-span-2 pt-1 border-t border-slate-200/60 flex justify-between text-[10px]">
+                <span class="text-slate-500">Completadas: <strong>${t.completedOrdersCount}</strong></span>
+                <span class="text-slate-500">En Proceso: <strong>${t.activeOrdersCount}</strong></span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Poblar selector de técnicos en la terminal y modal de horas extra
+    function renderFloorTechSelector() {
+      const selectFloor = document.getElementById('selectFloorTech');
+      const selectOt = document.getElementById('otInputTechId');
+      const techs = MoonshineStore.getTechnicians();
+
+      if (selectFloor) {
+        selectFloor.innerHTML = `
+          <option value="ALL">👥 Ver Todo el Turno</option>
+          ${techs.map(t => `<option value="${t.id}" ${t.id === activeFloorTechId ? 'selected' : ''}>👤 ${t.name} (T${t.turnoBase})</option>`).join('')}
+        `;
+      }
+
+      if (selectOt) {
+        selectOt.innerHTML = techs.map(t => `
+          <option value="${t.id}">👤 ${t.name} (Turno ${t.turnoBase} - ${t.especialidad || 'Fabricación'})</option>
+        `).join('');
+      }
+
+      const activeTech = techs.find(t => t.id === activeFloorTechId) || techs[0];
+      renderFloorTechBanner(activeTech);
+    }
+
+    // Cambiar técnico activo en la terminal
+    function setFloorActiveTech(techId) {
+      activeFloorTechId = techId;
+      MoonshineStore.setActiveTechnicianId(techId);
+      const techs = MoonshineStore.getTechnicians();
+      const activeTech = techs.find(t => t.id === techId);
+      renderFloorTechBanner(activeTech);
+      renderTallerFloor();
+    }
+
+    function renderFloorTechBanner(tech) {
+      const banner = document.getElementById('floorTechGoalBanner');
+      const titleEl = document.getElementById('tallerSectionTitle');
+      if (!banner) return;
+
+      if (!tech || activeFloorTechId === 'ALL') {
+        document.getElementById('floorTechName').textContent = 'Vista Grupal de Turno';
+        document.getElementById('floorTechSubtext').textContent = 'Mostrando las estructuras programadas para todo el personal en turno';
+        document.getElementById('floorTechAvatar').textContent = '👥';
+        document.getElementById('floorTechSpecBadge').textContent = 'Turno Completo';
+        document.getElementById('floorTechGoalProgressValue').textContent = '--';
+        document.getElementById('floorTechGoalBar').style.width = '100%';
+        if (titleEl) titleEl.textContent = 'Estructuras Programadas para este Turno';
+        return;
+      }
+
+      const initials = tech.name.split(' ').map(n=>n[0]).slice(0, 2).join('');
+      document.getElementById('floorTechAvatar').textContent = initials;
+      document.getElementById('floorTechName').textContent = tech.name;
+
+      const isRework = (tech.especialidad || '').includes('Arreglos') || (tech.especialidad || '').includes('Desarme');
+      const specText = isRework ? '🔧 Rework & Desarme' : '🏗️ Estructuras Nuevas';
+      document.getElementById('floorTechSpecBadge').textContent = specText;
+
+      const summary = MoonshineStore.getTechniciansEfficiencySummary();
+      const techMetrics = summary.find(s => s.techId === tech.id);
+      const produced = techMetrics ? techMetrics.totalProducedHours : 0;
+      const target = techMetrics ? techMetrics.totalAvailableHours : 7.5;
+      const pct = Math.min(100, Math.round((produced / Math.max(1, target)) * 100));
+
+      document.getElementById('floorTechSubtext').textContent = `Turno ${tech.turnoBase} &bull; Meta diaria: ${target}h ${techMetrics && techMetrics.overtimeHours > 0 ? `(+${techMetrics.overtimeHours}h extra)` : ''}`;
+      document.getElementById('floorTechGoalProgressValue').textContent = `${produced.toFixed(1)}h / ${target.toFixed(1)}h (${pct}%)`;
+      document.getElementById('floorTechGoalBar').style.width = `${pct}%`;
+
+      if (titleEl) titleEl.textContent = `Mis Tareas Asignadas (${tech.name})`;
+    }
+
+    // Modal y acciones de Horas Extra
+    function openAddOvertimeModal() {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const dateEl = document.getElementById('otInputDate');
+      if (dateEl) dateEl.value = todayIso;
+
+      const selectOt = document.getElementById('otInputTechId');
+      if (selectOt && activeFloorTechId !== 'ALL') {
+        selectOt.value = activeFloorTechId;
+      }
+
+      openModal('modalAddOvertime');
+    }
+
+    function setQuickOtHours(h) {
+      const input = document.getElementById('otInputHours');
+      if (input) input.value = h;
+    }
+
+    function handleAddOvertimeSubmit(e) {
+      e.preventDefault();
+      const techId = document.getElementById('otInputTechId').value;
+      const dateStr = document.getElementById('otInputDate').value;
+      const hours = parseFloat(document.getElementById('otInputHours').value) || 2;
+      const notes = document.getElementById('otInputNotes').value.trim();
+
+      const live = SchedulingEngine.getCurrentRealShift();
+      MoonshineStore.addOvertime({ techId, dayName: live.dayName, dateStr, hours, notes });
+
+      SchedulingEngine.runAutoSchedule();
+      renderWeeklyGrid();
+      renderTechniciansEfficiency();
+      renderFloorTechSelector();
+      renderTallerFloor();
+      updateKPIs();
+      closeModal('modalAddOvertime');
+
+      const tech = MoonshineStore.getTechnicians().find(t => t.id === techId);
+      showToast(`⏱️ +${hours} hrs extra registradas para ${tech ? tech.name : techId}. Capacidad aumentada.`, 'success');
+    }
+
+    // Modal de Avance Parcial
+    function openOrderProgressModal(orderId) {
+      const orders = MoonshineStore.getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      document.getElementById('progHiddenOrderId').value = order.id;
+      document.getElementById('progOrderFolio').textContent = order.id;
+      document.getElementById('progOrderTitle').textContent = order.estructuraNombre;
+      document.getElementById('progTotalHoursDisplay').textContent = `${order.horasEstimadas || 4} hrs`;
+      document.getElementById('progCurrentHoursDisplay').textContent = `${order.progresoHoras || 0} hrs`;
+
+      const remaining = Math.max(0.5, parseFloat(((order.horasEstimadas || 4) - (order.progresoHoras || 0)).toFixed(1)));
+      document.getElementById('progInputHoursWorked').value = remaining;
+      document.getElementById('progCheckComplete').checked = false;
+
+      openModal('modalOrderProgress');
+    }
+
+    function setQuickProgressPercent(pct) {
+      const orderId = document.getElementById('progHiddenOrderId').value;
+      const orders = MoonshineStore.getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const total = order.horasEstimadas || 4;
+      const targetHours = parseFloat(((total * pct) / 100).toFixed(1));
+      const hoursDiff = Math.max(0.5, parseFloat((targetHours - (order.progresoHoras || 0)).toFixed(1)));
+      document.getElementById('progInputHoursWorked').value = hoursDiff;
+      document.getElementById('progCheckComplete').checked = (pct === 100);
+    }
+
+    function handleOrderProgressSubmit(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('progHiddenOrderId').value;
+      const hoursWorked = parseFloat(document.getElementById('progInputHoursWorked').value) || 0;
+      const isComplete = document.getElementById('progCheckComplete').checked;
+      const notes = document.getElementById('progInputNotes').value.trim();
+
+      const techId = activeFloorTechId !== 'ALL' ? activeFloorTechId : null;
+
+      MoonshineStore.updateOrderProgress(orderId, { hoursWorked, isComplete, techId, notes });
+      SchedulingEngine.runAutoSchedule();
+
+      closeModal('modalOrderProgress');
+      renderTallerFloor();
+      renderWeeklyGrid();
+      renderTechniciansEfficiency();
+      renderOrdersTable();
+      updateKPIs();
+
+      showToast(`Avance registrado para ${orderId}.`, 'success');
+    }
+
+    function completeOrderFromFloor(orderId) {
+      const techId = activeFloorTechId !== 'ALL' ? activeFloorTechId : null;
+      MoonshineStore.updateOrderProgress(orderId, { isComplete: true, techId });
+      SchedulingEngine.runAutoSchedule();
+
+      renderTallerFloor();
+      renderWeeklyGrid();
+      renderTechniciansEfficiency();
+      renderOrdersTable();
+      updateKPIs();
+
+      showToast(`✔ Orden ${orderId} marcada como Completada y Lista para Entrega.`, 'success');
+    }
+
+    function copyWhatsAppGuideText() {
+      const text = `Hola! 👋 Para que tu solicitud de Moonshine sea tomada en cuenta, programada con los técnicos en el plan de turnos y recibir tu fecha de entrega formal con holgura de calidad, por favor regístrala por el canal oficial en este enlace:\n👉 https://gemaromoflex.github.io/moonshineplanner/\nUna vez registrada, el supervisor le asignará prioridad y recibirás tu confirmación formal por correo. ¡Muchas gracias!`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('📲 Mensaje copiado al portapapeles. ¡Listo para enviar por WhatsApp o Teams!', 'success');
+        });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('📲 Mensaje copiado al portapapeles.', 'success');
+      }
+    }
+
+    // Modo Piso de Taller
+    function setTallerShiftFilter(shiftId) {
+      currentTallerShift = shiftId;
+      [1, 2, 3].forEach(id => {
+        const btn = document.getElementById(`btnFilterT${id}`);
+        if (id === shiftId) {
+          btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-600 text-white';
+        } else {
+          btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded-lg text-slate-300 hover:bg-slate-700';
+        }
+      });
+      renderTallerFloor();
+    }
+
+    function renderTallerFloor() {
+      const plan = MoonshineStore.getPlan() || SchedulingEngine.runAutoSchedule();
+      const orders = MoonshineStore.getOrders();
+      const container = document.getElementById('tallerOrdersList');
+      if (!container) return;
+
+      const live = SchedulingEngine.getCurrentRealShift();
+      const relevantSlots = plan.grid.filter(s => s.shiftId === currentTallerShift && s.dayName === live.dayName);
+
+      const subtitleEl = document.getElementById('tallerShiftSubtitle');
+      if (subtitleEl && relevantSlots[0]) {
+        const slot = relevantSlots[0];
+        const names = (slot.workingNames && slot.workingNames.length > 0) ? slot.workingNames.join(', ') : `${slot.techsCount} Técnicos`;
+        subtitleEl.innerHTML = `Personal en turno: <strong>${names}</strong> &bull; Capacidad efectiva de ensamble: <strong>${slot.totalCapacityHours} horas</strong>`;
+      }
+
+      let slotItems = [];
+      relevantSlots.forEach(s => {
+        slotItems = [...slotItems, ...s.items];
+      });
+
+      // Si hay un técnico específico seleccionado, filtramos estrictamente para él
+      if (activeFloorTechId !== 'ALL') {
+        slotItems = slotItems.filter(item => item.tecnicoAsignadoId === activeFloorTechId);
+      }
+
+      if (slotItems.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl p-10 text-center border border-slate-200">
+            <i data-lucide="check-circle" class="w-12 h-12 text-emerald-500 mx-auto mb-3"></i>
+            <h4 class="text-base font-bold text-slate-800">No hay estructuras asignadas para este filtro</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Capacidad disponible para corte de tubular, mantenimiento preventivo o soporte Kaizen a líneas.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = slotItems.map(item => {
+        const fullOrder = orders.find(o => o.id === item.orderId) || {};
+        let statusBadge = '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Programado</span>';
+        if (fullOrder.estado === 'En Fabricación') {
+          statusBadge = '<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse">En Fabricación</span>';
+        } else if (fullOrder.estado === 'Listo para Entrega') {
+          statusBadge = '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">✔ Listo para Entrega</span>';
+        }
+
+        const isRework = (item.tipoTrabajo || '').includes('Arreglo') || (item.tipoTrabajo || '').includes('Desarme');
+        const typeBadge = isRework
+          ? '<span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">🔧 Arreglo / Desarme</span>'
+          : '<span class="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-full font-bold">🏗️ Estructura Nueva</span>';
+
+        const progressHours = fullOrder.progresoHoras || 0;
+        const totalHours = fullOrder.horasEstimadas || 4;
+        const progressPct = Math.min(100, Math.round((progressHours / totalHours) * 100));
+
+        return `
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex justify-between items-start">
+                <span class="font-mono text-xs font-bold text-slate-500">${item.orderId}</span>
+                <div class="flex items-center space-x-1.5">
+                  ${typeBadge}
+                  ${statusBadge}
+                </div>
+              </div>
+              <h4 class="font-bold text-slate-900 text-base mt-2">${item.estructuraNombre}</h4>
+              <p class="text-xs text-slate-600 mt-0.5">Área: <strong>${item.area}</strong> &bull; Solicitante: ${item.solicitante}</p>
+              
+              ${(item.esCarryOver || progressHours > 0) ? `
+                <div class="mt-2 text-[11px] font-bold text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200 flex items-center justify-between">
+                  <span>⚠️ Arrastre de Turno Anterior</span>
+                  <span class="font-mono">Faltan ${(totalHours - progressHours).toFixed(1)} hrs</span>
+                </div>
+              ` : ''}
+
+              <!-- Barra de avance de ensamble -->
+              <div class="mt-3">
+                <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-1">
+                  <span>Progreso de Fabricación:</span>
+                  <span class="font-mono text-slate-700">${progressHours}h / ${totalHours}h (${progressPct}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: ${progressPct}%"></div>
+                </div>
+              </div>
+
+              <div class="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                <div>
+                  <span class="text-slate-400 block text-[10px] uppercase font-bold">Tiempo en este Turno</span>
+                  <span class="font-bold text-slate-900 font-mono text-sm">${item.horasEnEsteTurno} hrs</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-slate-400 block text-[10px] uppercase font-bold">Modelo SketchUp</span>
+                  <span class="font-bold text-blue-600 font-mono">${item.sketchupRef || 'MSH-SKP-STD'}</span>
+                </div>
+              </div>
+
+              ${fullOrder.notas ? `<p class="mt-2 text-[11px] text-slate-500 italic bg-amber-50/60 p-2 rounded-lg border border-amber-200/50">Nota: ${fullOrder.notas}</p>` : ''}
+            </div>
+
+            <!-- Botones de Acción para el Técnico de Moonshine -->
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+              <button onclick="updateOrderStatus('${item.orderId}', 'En Fabricación')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2 px-2.5 rounded-lg text-xs transition flex items-center justify-center space-x-1" title="Iniciar">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Iniciar</span>
+              </button>
+              <button onclick="openOrderProgressModal('${item.orderId}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 px-2.5 rounded-lg text-xs border border-blue-200 transition flex items-center justify-center space-x-1" title="Registrar horas trabajadas">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                <span>Avance %</span>
+              </button>
+              <button onclick="completeOrderFromFloor('${item.orderId}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>Terminado ✔</span>
+              </button>
+              <button onclick="openOrderDetailsModal('${item.orderId}')" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs transition" title="Ver Ficha y SketchUp">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // Actualizar estado de una orden desde el piso
+    function updateOrderStatus(orderId, newStatus) {
+      const orders = MoonshineStore.getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order.estado = newStatus;
+        MoonshineStore.saveOrders(orders);
+        SchedulingEngine.runAutoSchedule();
+        renderTallerFloor();
+        renderOrdersTable();
+        updateKPIs();
+        showToast(`Orden ${orderId} marcada como "${newStatus}"`, 'success');
+      }
+    }
+
+    // Modal de Detalles y SketchUp
+    function openOrderDetailsModal(orderId) {
+      const orders = MoonshineStore.getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const catalog = MoonshineStore.getCatalog();
+      const catalogItem = catalog.find(c => c.id === order.estructuraId || c.name.toLowerCase() === (order.estructuraNombre || '').toLowerCase());
+      const sketchupUrl = order.sketchupUrl || (catalogItem ? catalogItem.sketchupUrl : '');
+      const unitPrice = catalogItem && catalogItem.unitPrice ? catalogItem.unitPrice : 0;
+
+      document.getElementById('modalDetailFolio').textContent = order.id;
+      document.getElementById('modalDetailTitle').textContent = order.estructuraNombre;
+
+      const body = document.getElementById('modalDetailBody');
+      body.innerHTML = `
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div><strong class="text-slate-500">Solicitante:</strong> <br>${order.solicitante}</div>
+          <div><strong class="text-slate-500">Área Destino:</strong> <br>${order.area}</div>
+          <div><strong class="text-slate-500">Prioridad:</strong> <br><span class="font-bold text-red-600">${order.prioridad}</span></div>
+          <div><strong class="text-slate-500">Estado Actual:</strong> <br>${order.estado}</div>
+          <div><strong class="text-slate-500">Horas Totales Estimadas:</strong> <br>${order.horasEstimadas} hrs (${order.cantidad} pz)</div>
+          <div><strong class="text-slate-500">Fecha Requerida:</strong> <br>${order.fechaRequerida || 'No especificada'}</div>
+          ${unitPrice ? `<div class="col-span-2 pt-1 border-t border-slate-200"><strong class="text-slate-500">Costo Referencia Catálogo:</strong> <span class="font-bold text-emerald-700">$${unitPrice} USD / pz</span> (Total est.: $${unitPrice * (order.cantidad || 1)} USD)</div>` : ''}
+        </div>
+
+        <div class="border border-blue-200 bg-blue-50/60 p-4 rounded-xl space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-blue-900 text-sm flex items-center space-x-1.5">
+              <i data-lucide="box" class="w-4 h-4"></i>
+              <span>Modelo 3D en SketchUp (Catalogo Ghost Fish)</span>
+            </h4>
+            <span class="font-mono text-[11px] font-bold bg-white px-2 py-0.5 rounded border border-blue-200 text-blue-800">${order.sketchupRef || (catalogItem ? catalogItem.sketchupCode : 'MSH-SKP-01')}</span>
+          </div>
+          ${sketchupUrl ? `
+            <a href="${sketchupUrl}" target="_blank" rel="noopener noreferrer" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center space-x-2">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+              <span>Abrir Diseño 3D Interactivo en SketchUp Web</span>
+            </a>
+          ` : `
+            <p class="text-[11px] text-blue-700">Sin enlace web externo registrado para esta estructura.</p>
+          `}
+        </div>
+
+        ${order.notas ? `
+          <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-amber-900">
+            <strong>Notas del Solicitante:</strong>
+            <p class="mt-1">${order.notas}</p>
+          </div>
+        ` : ''}
+      `;
+
+      document.getElementById('modalOrderDetails').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Tabla General de Pedidos
+    function renderOrdersTable() {
+      const orders = MoonshineStore.getOrders();
+      const tbody = document.getElementById('ordersTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = orders.map(o => {
+        let pColor = 'bg-blue-100 text-blue-800';
+        if (o.prioridad === 'Crítica') pColor = 'bg-red-100 text-red-800 font-bold';
+        else if (o.prioridad === 'Alta') pColor = 'bg-orange-100 text-orange-800 font-bold';
+        else if (o.prioridad === 'Baja') pColor = 'bg-slate-100 text-slate-700';
+
+        let sColor = 'bg-slate-100 text-slate-700';
+        if (o.estado === 'En Fabricación') sColor = 'bg-amber-100 text-amber-800 font-bold';
+        else if (o.estado === 'Listo para Entrega') sColor = 'bg-emerald-100 text-emerald-800 font-bold';
+        else if (o.estado === 'Entregado') sColor = 'bg-slate-200 text-slate-800';
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-3 font-mono font-bold text-slate-900">${o.id}</td>
+            <td class="py-3 px-3">${o.solicitante}</td>
+            <td class="py-3 px-3 font-medium">${o.area}</td>
+            <td class="py-3 px-3 font-semibold text-slate-800">${o.estructuraNombre}</td>
+            <td class="py-3 px-3 text-center">${o.cantidad}</td>
+            <td class="py-3 px-3 text-center font-mono font-bold">${o.horasEstimadas}h</td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[10px] ${pColor}">${o.prioridad}</span>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[10px] ${sColor}">${o.estado}</span>
+            </td>
+            <td class="py-3 px-3 text-slate-600 font-medium">${o.fechaEntregaEstimada || 'Por secuenciar'}</td>
+            <td class="py-3 px-3 text-center">
+              <button onclick="openOrderDetailsModal('${o.id}')" class="text-blue-600 hover:text-blue-800 p-1" title="Ver Detalles">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function filterOrdersTable() {
+      const term = document.getElementById('orderSearchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#ordersTableBody tr');
+      rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+      });
+    }
+
+    // Renderizar Catálogo de Estructuras
+    function renderCatalogGrid() {
+      const catalog = MoonshineStore.getCatalog();
+      const container = document.getElementById('catalogGrid');
+      if (!container) return;
+
+      container.innerHTML = catalog.map(item => `
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition">
+          <div>
+            <div class="flex justify-between items-start gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                ${item.category}
+              </span>
+              <div class="flex items-center gap-1.5">
+                ${item.unitPrice ? `<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">$${item.unitPrice}</span>` : ''}
+                <button onclick="editCatalogItemHours('${item.id}')" title="Ajustar horas" class="text-xs font-mono font-black text-slate-800 bg-slate-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded border border-slate-200 transition flex items-center gap-1">
+                  <span>${item.standardHours}h</span>
+                  <span class="text-[10px] text-slate-400">✏️</span>
+                </button>
+              </div>
+            </div>
+            <h4 class="font-bold text-slate-900 text-sm mt-2.5">${item.name}</h4>
+          </div>
+
+          <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
+            <span class="font-mono text-[10px] text-slate-400 truncate">${item.sketchupCode}</span>
+            ${item.sketchupUrl && item.sketchupUrl.startsWith('http') ? `
+              <a href="${item.sketchupUrl}" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] shadow-2xs transition shrink-0 flex items-center gap-1">
+                <span>🔗 Ver 3D</span>
+              </a>
+            ` : `
+              <span class="text-slate-400 text-[10px]">${item.sketchupCode}</span>
+            `}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editCatalogItemHours(structId) {
+      const catalog = MoonshineStore.getCatalog();
+      const item = catalog.find(c => c.id === structId);
+      if (!item) return;
+
+      const input = prompt(`Ajustar tiempo estándar de fabricación (en horas) para:\n"${item.name}"`, item.standardHours);
+      if (input === null) return;
+      const newHours = parseFloat(input);
+      if (isNaN(newHours) || newHours <= 0 || newHours > 200) {
+        showToast('Ingresa un número válido de horas (entre 0.5 y 200).', 'warning');
+        return;
+      }
+
+      item.standardHours = newHours;
+      MoonshineStore.saveCatalog(catalog);
+      renderCatalogGrid();
+      renderStructureSelect();
+      SchedulingEngine.runAutoSchedule();
+      showToast(`Tiempo estándar de "${item.name}" actualizado a ${newHours} hrs.`, 'success');
+    }
+
+    // Modal Nueva Estructura
+    function openNewStructureModal() {
+      document.getElementById('modalStructure').classList.remove('hidden');
+    }
+
+    function handleCreateStructure(e) {
+      e.preventDefault();
+      const name = document.getElementById('newStructName').value.trim();
+      const category = document.getElementById('newStructCategory').value.trim();
+      const hours = parseFloat(document.getElementById('newStructHours').value);
+      const skp = document.getElementById('newStructSketchup').value.trim() || `MSH-SKP-${Date.now().toString().slice(-4)}`;
+      const priceEl = document.getElementById('newStructPrice');
+      const unitPrice = priceEl ? parseFloat(priceEl.value || '0') : 0;
+      const urlEl = document.getElementById('newStructSketchupUrl');
+      const sketchupUrl = urlEl ? urlEl.value.trim() : '';
+      const desc = document.getElementById('newStructDesc').value.trim();
+
+      const catalog = MoonshineStore.getCatalog();
+      const nextId = `EST-${(catalog.length + 1).toString().padStart(3, '0')}`;
+
+      catalog.push({
+        id: nextId,
+        name,
+        category,
+        standardHours: hours,
+        unitPrice,
+        sketchupCode: skp,
+        sketchupUrl,
+        description: desc,
+        icon: 'box'
+      });
+
+      MoonshineStore.saveCatalog(catalog);
+      renderCatalogGrid();
+      renderStructureSelect();
+      closeModal('modalStructure');
+      showToast(`Estructura "${name}" añadida al catálogo exitosamente.`, 'success');
+      document.getElementById('newStructureForm').reset();
+    }
+
+    // Matriz de Roster (Rol de Técnicos 24/7)
+    function renderRosterMatrix() {
+      const roster = MoonshineStore.getRoster();
+      const tbody = document.getElementById('rosterMatrixBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = SHIFTS_DEF.map(shift => {
+        const cells = DAYS_OF_WEEK.map(day => {
+          const techs = roster[day] && roster[day][shift.id] ? roster[day][shift.id] : 2;
+          const isTwo = techs === 2;
+          const btnClass = isTwo 
+            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' 
+            : 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
+
+          return `
+            <td class="py-2 px-1">
+              <button onclick="toggleRosterTechs('${day}', ${shift.id})" class="w-full py-1.5 px-2 rounded-lg border text-xs ${btnClass} hover:opacity-80 transition">
+                ${techs} Téc (${techs * 7.5}h)
+              </button>
+            </td>
+          `;
+        }).join('');
+
+        return `
+          <tr>
+            <td class="py-2.5 px-3 text-left font-bold text-slate-800 bg-slate-50">
+              ${shift.label} <span class="text-[10px] text-slate-500 font-normal">(${shift.hours})</span>
+            </td>
+            ${cells}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function toggleRosterTechs(day, shiftId) {
+      const roster = MoonshineStore.getRoster();
+      const current = roster[day][shiftId] || 2;
+      const targetCount = current === 2 ? 1 : 2;
+
+      // Sincronizar con el horario nominal
+      const sched = MoonshineStore.getRosterSchedule();
+      if (sched[day] && sched[day][shiftId]) {
+        const slot = sched[day][shiftId];
+        if (targetCount === 1 && slot.working.length > 1) {
+          const removed = slot.working.pop();
+          if (!slot.off.includes(removed)) slot.off.push(removed);
+        } else if (targetCount >= 2 && slot.off.length > 0) {
+          const restored = slot.off.pop();
+          if (!slot.working.includes(restored)) slot.working.push(restored);
+        }
+        MoonshineStore.saveRosterSchedule(sched);
+      }
+
+      SchedulingEngine.runAutoSchedule();
+      renderRosterMatrix();
+      renderRosterCalendar();
+      renderTechniciansManagement();
+      renderWeeklyGrid();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+      showToast(`Dotación de ${day} (${shiftId === 1 ? 'T1' : (shiftId === 2 ? 'T2' : 'T3')}) cambiada a ${targetCount} técnico(s).`, 'info');
+    }
+
+    // ========================================================
+    // GESTIÓN DE TÉCNICOS Y CALENDARIO SEMANAL 24/7 (ROSTER)
+    // ========================================================
+
+    function renderTechniciansManagement() {
+      const techs = MoonshineStore.getTechnicians();
+      const sched = MoonshineStore.getRosterSchedule();
+
+      // Métricas
+      const elTotal = document.getElementById('metricTotalTechs');
+      const elT1 = document.getElementById('metricT1Techs');
+      const elT2 = document.getElementById('metricT2Techs');
+      const elT3 = document.getElementById('metricT3Techs');
+      const elCap = document.getElementById('metricWeeklyCapacityHours');
+
+      if (elTotal) elTotal.textContent = techs.length;
+      if (elT1) elT1.textContent = techs.filter(t => t.turnoBase === 1).length;
+      if (elT2) elT2.textContent = techs.filter(t => t.turnoBase === 2).length;
+      if (elT3) elT3.textContent = techs.filter(t => t.turnoBase === 3).length;
+
+      // Calcular capacidad semanal total
+      let totalWeeklyHours = 0;
+      DAYS_OF_WEEK.forEach(day => {
+        SHIFTS_DEF.forEach(shift => {
+          const slot = sched[day] && sched[day][shift.id];
+          const workingCount = (slot && Array.isArray(slot.working)) ? slot.working.length : 2;
+          totalWeeklyHours += workingCount * 7.5;
+        });
+      });
+      if (elCap) elCap.textContent = `${totalWeeklyHours.toFixed(1)} h`;
+
+      // Tarjetas de técnicos registrados
+      const container = document.getElementById('techniciansCardsContainer');
+      if (!container) return;
+
+      container.innerHTML = techs.map(t => {
+        const initials = t.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        const shiftColor = t.turnoBase === 1 
+          ? 'from-blue-600 to-indigo-600 text-white' 
+          : (t.turnoBase === 2 ? 'from-amber-500 to-orange-600 text-white' : 'from-purple-600 to-indigo-700 text-white');
+        const shiftBadge = t.turnoBase === 1
+          ? '<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">T1 - Matutino</span>'
+          : (t.turnoBase === 2
+            ? '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">T2 - Vespertino</span>'
+            : '<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">T3 - Nocturno</span>');
+
+        return `
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs hover:shadow-sm transition flex flex-col justify-between space-y-3">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr ${shiftColor} flex items-center justify-center font-black text-sm shadow-xs">
+                  ${initials}
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900 text-sm">${t.name}</h4>
+                  <p class="text-[10px] font-mono text-slate-400 font-bold">${t.id}</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-1">
+                <button onclick="openEditTechnicianModal('${t.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Editar técnico">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="handleDeleteTechnician('${t.id}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Dar de baja">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                ${shiftBadge}
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  t.especialidad === 'Arreglos / Desarme' ? 'bg-amber-100 text-amber-800' : (t.especialidad === 'Flexible' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800')
+                }">
+                  ${t.especialidad || 'Estructuras Nuevas'}
+                </span>
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  🎯 ${t.metaHorasTurno || 7.5}h
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-500 font-medium truncate max-w-[140px]">${t.rol || 'Técnico de Ensamble'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderRosterCalendar() {
+      const container = document.getElementById('rosterCalendarContainer');
+      if (!container) return;
+
+      const schedule = MoonshineStore.getRosterSchedule();
+      const techs = MoonshineStore.getTechnicians();
+      const techMap = new Map(techs.map(t => [t.id, t]));
+
+      const headerCells = DAYS_OF_WEEK.map(day => `
+        <th class="py-3 px-2 text-center text-xs font-bold text-slate-700 bg-slate-100 border-b border-slate-200">
+          <span class="block">${day}</span>
+        </th>
+      `).join('');
+
+      const rowsHtml = SHIFTS_DEF.map(shift => {
+        const shiftColorBadge = shift.id === 1 ? 'badge-shift-1' : (shift.id === 2 ? 'badge-shift-2' : 'badge-shift-3');
+
+        const dayCells = DAYS_OF_WEEK.map(day => {
+          const slot = (schedule[day] && schedule[day][shift.id]) ? schedule[day][shift.id] : { working: [], off: [] };
+          const workingIds = Array.isArray(slot.working) ? slot.working : [];
+          const offIds = Array.isArray(slot.off) ? slot.off : [];
+          const workingCount = workingIds.length;
+          const capacityHours = workingCount * 7.5;
+
+          const capBadge = workingCount >= 2 
+            ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">${workingCount} Téc (${capacityHours}h)</span>`
+            : workingCount === 1
+            ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-md">1 Téc (${capacityHours}h)</span>`
+            : `<span class="bg-red-100 text-red-800 text-[10px] font-black px-2 py-0.5 rounded-md">0 Téc (0h)</span>`;
+
+          // Chips para técnicos trabajando
+          const workingChips = workingIds.map(tid => {
+            const t = techMap.get(tid) || { id: tid, name: tid };
+            return `
+              <div onclick="toggleTechDay('${day}', ${shift.id}, '${t.id}')" 
+                   class="group flex items-center justify-between bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 px-2 py-1 rounded-lg text-[11px] font-bold text-emerald-900 mb-1 cursor-pointer transition shadow-2xs"
+                   title="🟢 ${t.name}: Trabajando. Clic para marcar DESCANSO rotativo">
+                <span class="truncate flex items-center space-x-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0"></span>
+                  <span class="truncate">${t.name}</span>
+                </span>
+                <span class="text-[9px] text-emerald-700 opacity-60 group-hover:opacity-100 font-normal ml-1">Descansar?</span>
+              </div>
+            `;
+          }).join('');
+
+          // Chips para técnicos descansando
+          const offChips = offIds.map(tid => {
+            const t = techMap.get(tid) || { id: tid, name: tid };
+            return `
+              <div onclick="toggleTechDay('${day}', ${shift.id}, '${t.id}')" 
+                   class="group flex items-center justify-between bg-slate-100 hover:bg-emerald-50 border border-dashed border-slate-300 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-500 mb-1 cursor-pointer transition"
+                   title="😴 ${t.name}: En descanso rotativo. Clic para ACTIVAR trabajo hoy">
+                <span class="truncate flex items-center space-x-1.5">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0"></span>
+                  <span class="line-through truncate">${t.name}</span>
+                </span>
+                <span class="text-[9px] text-amber-700 font-bold ml-1">Descanso</span>
+              </div>
+            `;
+          }).join('');
+
+          // Opciones para añadir otro técnico a este turno
+          const availableTechs = techs.filter(t => !workingIds.includes(t.id) && !offIds.includes(t.id));
+          const addOptions = availableTechs.map(t => `<option value="${t.id}">+ ${t.name}</option>`).join('');
+
+          const addSelector = availableTechs.length > 0 ? `
+            <select onchange="if(this.value){ addTechToShift('${day}', ${shift.id}, this.value); this.value=''; }" 
+                    class="w-full text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded p-1 outline-none mt-1 cursor-pointer">
+              <option value="">+ Asignar Técnico...</option>
+              ${addOptions}
+            </select>
+          ` : '';
+
+          return `
+            <td class="p-2 border border-slate-200 align-top bg-white min-w-[155px]">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-100">
+                ${capBadge}
+                ${workingCount === 1 ? '<span class="text-[9px] font-bold text-amber-700">Descanso</span>' : ''}
+              </div>
+              <div class="space-y-1">
+                ${workingChips}
+                ${offChips}
+                ${addSelector}
+              </div>
+            </td>
+          `;
+        }).join('');
+
+        return `
+          <tr>
+            <td class="p-3 bg-slate-50 border border-slate-200 align-middle min-w-[140px]">
+              <span class="inline-block px-2 py-0.5 rounded text-xs font-bold ${shiftColorBadge} mb-1">
+                ${shift.name}
+              </span>
+              <p class="text-[11px] font-bold text-slate-800">${shift.label}</p>
+              <p class="text-[10px] font-mono text-slate-500">${shift.hours}</p>
+            </td>
+            ${dayCells}
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="w-full border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+          <thead>
+            <tr>
+              <th class="py-3 px-3 text-left text-xs font-bold text-slate-700 bg-slate-100 border-b border-slate-200">Turno / Horario</th>
+              ${headerCells}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleTechDay(day, shiftId, techId) {
+      MoonshineStore.toggleTechDayStatus(day, shiftId, techId);
+      SchedulingEngine.runAutoSchedule();
+      renderRosterCalendar();
+      renderTechniciansManagement();
+      renderRosterMatrix();
+      renderWeeklyGrid();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+      showToast('Horario y capacidad recalculados exitosamente.', 'info');
+    }
+
+    function addTechToShift(day, shiftId, techId) {
+      MoonshineStore.addTechToShift(day, shiftId, techId);
+      SchedulingEngine.runAutoSchedule();
+      renderRosterCalendar();
+      renderTechniciansManagement();
+      renderRosterMatrix();
+      renderWeeklyGrid();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+      showToast('Técnico asignado al turno.', 'success');
+    }
+
+    function resetDefaultRosterSchedule() {
+      if (confirm('¿Deseas restablecer el rol semanal de descansos al esquema inicial 24/7?')) {
+        MoonshineStore.resetRosterToDefault();
+        SchedulingEngine.runAutoSchedule();
+        renderRosterCalendar();
+        renderTechniciansManagement();
+        renderRosterMatrix();
+        renderWeeklyGrid();
+        renderTallerFloor();
+        updateKPIs();
+        updateEmailPreview();
+        showToast('Rol de descansos restablecido a los valores predeterminados.', 'info');
+      }
+    }
+
+    function handleCreateTechnician(e) {
+      e.preventDefault();
+      const name = document.getElementById('techInputName').value.trim();
+      const turnoBase = parseInt(document.getElementById('techInputShift').value, 10) || 1;
+      const id = document.getElementById('techInputId').value.trim();
+      const rol = document.getElementById('techInputRole').value.trim();
+      const especialidad = document.getElementById('techInputSpecialty').value;
+      const metaHorasTurno = parseFloat(document.getElementById('techInputGoalHours').value) || 7.5;
+
+      if (!name) return;
+
+      const newTech = MoonshineStore.addTechnician({ name, turnoBase, id: id || undefined, rol, especialidad, metaHorasTurno });
+      SchedulingEngine.runAutoSchedule();
+      renderTechniciansManagement();
+      renderRosterCalendar();
+      renderRosterMatrix();
+      renderWeeklyGrid();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+
+      closeModal('modalAddTechnician');
+      document.getElementById('addTechnicianForm').reset();
+      showToast(`Técnico "${newTech.name}" registrado (${especialidad}) e integrado con éxito.`, 'success');
+    }
+
+    function openEditTechnicianModal(techId) {
+      const techs = MoonshineStore.getTechnicians();
+      const t = techs.find(x => x.id === techId);
+      if (!t) return;
+
+      document.getElementById('editTechHiddenId').value = t.id;
+      document.getElementById('editTechInputName').value = t.name;
+      document.getElementById('editTechInputShift').value = String(t.turnoBase || 1);
+      document.getElementById('editTechInputIdDisplay').value = t.id;
+      document.getElementById('editTechInputRole').value = t.rol || 'Técnico de Ensamble Moonshine';
+      document.getElementById('editTechInputSpecialty').value = t.especialidad || 'Estructuras Nuevas';
+      document.getElementById('editTechInputGoalHours').value = t.metaHorasTurno || 7.5;
+
+      openModal('modalEditTechnician');
+    }
+
+    function handleEditTechnicianSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('editTechHiddenId').value;
+      const name = document.getElementById('editTechInputName').value.trim();
+      const turnoBase = parseInt(document.getElementById('editTechInputShift').value, 10) || 1;
+      const rol = document.getElementById('editTechInputRole').value.trim();
+      const especialidad = document.getElementById('editTechInputSpecialty').value;
+      const metaHorasTurno = parseFloat(document.getElementById('editTechInputGoalHours').value) || 7.5;
+
+      MoonshineStore.updateTechnician(id, { name, turnoBase, rol, especialidad, metaHorasTurno });
+      SchedulingEngine.runAutoSchedule();
+      renderTechniciansManagement();
+      renderRosterCalendar();
+      renderRosterMatrix();
+      renderWeeklyGrid();
+      renderTallerFloor();
+      updateKPIs();
+      updateEmailPreview();
+
+      closeModal('modalEditTechnician');
+      showToast(`Datos del técnico actualizados correctamente.`, 'success');
+    }
+
+    function handleDeleteTechnician(techId) {
+      const techs = MoonshineStore.getTechnicians();
+      const t = techs.find(x => x.id === techId);
+      if (!t) return;
+
+      if (confirm(`¿Estás seguro de que deseas eliminar al técnico "${t.name}" (${t.id}) de la plantilla y del rol de turnos?`)) {
+        MoonshineStore.deleteTechnician(techId);
+        SchedulingEngine.runAutoSchedule();
+        renderTechniciansManagement();
+        renderRosterCalendar();
+        renderRosterMatrix();
+        renderWeeklyGrid();
+        renderTallerFloor();
+        updateKPIs();
+        updateEmailPreview();
+        showToast(`Técnico "${t.name}" removido de la plantilla.`, 'info');
+      }
+    }
+
+    function handlePasteEmailSubmit(e) {
+      e.preventDefault();
+      const text = document.getElementById('pasteEmailText').value.trim();
+      if (!text) return;
+
+      OutlookSyncManager.parsePastedEmail(text);
+      closeModal('modalPasteEmail');
+      document.getElementById('pasteEmailForm').reset();
+      switchTab('tab-inbox');
+    }
+
+    function openCloudSyncModal() {
+      const state = OutlookSyncManager.getState();
+      const input = document.getElementById('inputCloudSyncUrl');
+      if (input) input.value = state.cloudSyncUrl || '';
+      openModal('modalCloudSync');
+    }
+
+    function saveCloudSyncUrl() {
+      const input = document.getElementById('inputCloudSyncUrl');
+      const state = OutlookSyncManager.getState();
+      state.cloudSyncUrl = input ? input.value.trim() : '';
+      OutlookSyncManager.saveState(state);
+      closeModal('modalCloudSync');
+      OutlookSyncManager.scanNow(true);
+    }
+
+    // Vista previa de correo
+    function updateEmailPreview() {
+      const daySelector = document.getElementById('emailDaySelector');
+      const targetDay = daySelector ? daySelector.value : null;
+      const container = document.getElementById('emailPreviewContainer');
+      if (!container) return;
+
+      container.innerHTML = EmailReportGenerator.generateDailyEmailHtml(targetDay);
+    }
+
+    function copyEmailHtmlToClipboard() {
+      const daySelector = document.getElementById('emailDaySelector');
+      const targetDay = daySelector ? daySelector.value : null;
+      const html = EmailReportGenerator.generateDailyEmailHtml(targetDay);
+
+      navigator.clipboard.writeText(html).then(() => {
+        showToast('Formato HTML copiado. Puedes pegarlo en Outlook (Ctrl + V).', 'success');
+      }).catch(err => {
+        console.error('Error al copiar al portapapeles:', err);
+        showToast('No se pudo copiar automáticamente. Intenta seleccionarlo manualmente.', 'error');
+      });
+    }
+
+    function openMailtoClient() {
+      const daySelector = document.getElementById('emailDaySelector');
+      const targetDay = daySelector ? daySelector.value : 'Hoy';
+      const settings = MoonshineStore.getSettings();
+      const subject = encodeURIComponent(`[Moonshine Shop] Plan Diario de Producción — ${targetDay}`);
+      const body = encodeURIComponent(`Estimado equipo:\n\nSe adjunta el plan de producción de Moonshine para el día ${targetDay}.\nFavor de verificar las estructuras programadas por turno en el portal de Moonshine Flow.\n\nAtentamente,\nTaller de Innovación Moonshine`);
+
+      window.location.href = `mailto:${settings.notificationEmail}?subject=${subject}&body=${body}`;
+    }
+
+    // Importar CSV
+    function handleImportCsv(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = SharePointBridge.parseSharePointCsv(event.target.result);
+          const current = MoonshineStore.getOrders();
+          MoonshineStore.saveOrders([...imported, ...current]);
+          SchedulingEngine.runAutoSchedule();
+          renderOrdersTable();
+          renderWeeklyGrid();
+          updateKPIs();
+          showToast(`Se importaron ${imported.length} pedidos desde SharePoint.`, 'success');
+        } catch (err) {
+          showToast(`Error al procesar CSV: ${err.message}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function saveWebhookUrl() {
+      const url = document.getElementById('inputWebhookUrl').value.trim();
+      const settings = MoonshineStore.getSettings();
+      settings.powerAutomateWebhook = url;
+      MoonshineStore.saveSettings(settings);
+      showToast('URL de Webhook Power Automate guardada.', 'success');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      let bgColor = 'bg-slate-900 text-white';
+      if (type === 'success') bgColor = 'bg-emerald-600 text-white';
+      else if (type === 'error') bgColor = 'bg-red-600 text-white';
+
+      toast.className = `${bgColor} px-4 py-3 rounded-xl shadow-lg text-xs font-semibold flex items-center space-x-2 transition transform duration-300 pointer-events-auto`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
