@@ -740,9 +740,14 @@ class MoonshineStore {
     }
   }
 
-  static set(key, value) {
+  static set(key, value, skipCloud = false) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      const nextStr = JSON.stringify(value);
+      const prevStr = localStorage.getItem(key);
+      localStorage.setItem(key, nextStr);
+      if (!skipCloud && prevStr !== nextStr && typeof SupabaseCloudSync !== 'undefined' && key !== STORAGE_KEYS.ACTIVE_TECH && key !== STORAGE_KEYS.PLAN) {
+        SupabaseCloudSync.pushKey(key, value);
+      }
     } catch (e) {
       console.error(`Error saving key ${key}:`, e);
     }
@@ -1695,9 +1700,14 @@ class OutlookSyncManager {
     return defaultState;
   }
 
-  static saveState(state) {
+  static saveState(state, skipCloud = false) {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+      const nextStr = JSON.stringify(state);
+      const prevStr = localStorage.getItem(this.STORAGE_KEY);
+      localStorage.setItem(this.STORAGE_KEY, nextStr);
+      if (!skipCloud && prevStr !== nextStr && typeof SupabaseCloudSync !== 'undefined') {
+        SupabaseCloudSync.pushKey(this.STORAGE_KEY, state);
+      }
     } catch (e) {
       console.warn('Error al guardar estado Outlook:', e);
     }
@@ -2569,11 +2579,121 @@ Supervisión Lean Moonshine Axiom`;
   }
 }
 
+// ==========================================
+// 7. SINCRONIZACIÓN EN TIEMPO REAL CON SUPABASE
+// ==========================================
+class SupabaseCloudSync {
+  static SUPABASE_URL = 'https://rutlzcimpvxjuimxpcxx.supabase.co';
+  static SUPABASE_KEY = 'sb_publishable_8xnIFofq-cj8j9GwqcLZ0A_CX1InWlU';
+  static TABLE = 'moonshine_store';
+  static lastTimestamps = {};
+  static syncInterval = null;
+  static isReady = false;
+
+  static getHeaders(extra = {}) {
+    return {
+      'apikey': this.SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      ...extra
+    };
+  }
+
+  static async init() {
+    await this.pullAll(true);
+    // Sincronización periódica cada 8 segundos para reflejar cambios en vivo entre jefe, supervisores y técnicos
+    if (this.syncInterval) clearInterval(this.syncInterval);
+    this.syncInterval = setInterval(() => this.pullAll(false), 8000);
+    window.addEventListener('focus', () => this.pullAll(false));
+  }
+
+  static async pushKey(key, value) {
+    try {
+      const nowIso = new Date().toISOString();
+      this.lastTimestamps[key] = nowIso;
+      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?on_conflict=key`, {
+        method: 'POST',
+        headers: this.getHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify([{ key, value, updated_at: nowIso }])
+      });
+      if (res.ok) {
+        this.isReady = true;
+      }
+    } catch (e) {
+      // Silencioso en modo offline
+    }
+  }
+
+  static async pullAll(isInitial = false) {
+    try {
+      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?select=key,value,updated_at`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        cache: 'no-store'
+      });
+
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows)) return;
+      this.isReady = true;
+
+      // Si la tabla en Supabase está recién creada (vacía), subimos los datos iniciales
+      if (rows.length === 0 && isInitial) {
+        await this.pushKey(STORAGE_KEYS.ORDERS, MoonshineStore.getOrders());
+        await this.pushKey(STORAGE_KEYS.CATALOG, MoonshineStore.getCatalog());
+        await this.pushKey(STORAGE_KEYS.TECHNICIANS, MoonshineStore.getTechnicians());
+        await this.pushKey(STORAGE_KEYS.ROSTER_SCHEDULE, MoonshineStore.getRosterSchedule());
+        await this.pushKey(STORAGE_KEYS.OVERTIME, MoonshineStore.getOvertime());
+        await this.pushKey(OutlookSyncManager.STORAGE_KEY, OutlookSyncManager.getState());
+        return;
+      }
+
+      let anyChanged = false;
+      rows.forEach(row => {
+        if (!row || !row.key || row.value === undefined) return;
+        const prevTs = this.lastTimestamps[row.key];
+        const currentLocalStr = localStorage.getItem(row.key);
+        const incomingStr = JSON.stringify(row.value);
+
+        if (currentLocalStr !== incomingStr && (!prevTs || row.updated_at > prevTs)) {
+          localStorage.setItem(row.key, incomingStr);
+          this.lastTimestamps[row.key] = row.updated_at;
+          anyChanged = true;
+        } else if (!prevTs && row.updated_at) {
+          this.lastTimestamps[row.key] = row.updated_at;
+        }
+      });
+
+      if (anyChanged) {
+        SchedulingEngine.runAutoSchedule();
+        if (typeof renderOrdersTable === 'function') renderOrdersTable();
+        if (typeof renderWeeklyGrid === 'function') renderWeeklyGrid();
+        if (typeof renderTallerFloor === 'function') renderTallerFloor();
+        if (typeof renderTechniciansEfficiency === 'function') renderTechniciansEfficiency();
+        if (typeof renderTechniciansManagement === 'function') renderTechniciansManagement();
+        if (typeof renderRosterCalendar === 'function') renderRosterCalendar();
+        if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+        if (typeof renderStructureSelect === 'function') renderStructureSelect();
+        if (typeof updateKPIs === 'function') updateKPIs();
+        OutlookSyncManager.renderInbox();
+        OutlookSyncManager.updateNotificationBanner();
+      }
+    } catch (e) {
+      // Silencioso si no hay red
+    }
+  }
+}
+
+// Iniciar sincronización con Supabase al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => SupabaseCloudSync.init(), 500);
+});
+
 // Exportar globalmente para index.html
 window.MoonshineStore = MoonshineStore;
 window.SchedulingEngine = SchedulingEngine;
 window.EmailReportGenerator = EmailReportGenerator;
 window.SharePointBridge = SharePointBridge;
 window.OutlookSyncManager = OutlookSyncManager;
+window.SupabaseCloudSync = SupabaseCloudSync;
 window.DAYS_OF_WEEK = DAYS_OF_WEEK;
 window.SHIFTS_DEF = SHIFTS_DEF;
