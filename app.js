@@ -2610,10 +2610,10 @@ class SupabaseCloudSync {
     try {
       const nowIso = new Date().toISOString();
       this.lastTimestamps[key] = nowIso;
-      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?on_conflict=key`, {
+      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?on_conflict=store_key`, {
         method: 'POST',
         headers: this.getHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
-        body: JSON.stringify([{ key, value, updated_at: nowIso }])
+        body: JSON.stringify([{ store_key: key, store_data: value, updated_at: nowIso }])
       });
       if (res.ok) {
         this.isReady = true;
@@ -2625,7 +2625,7 @@ class SupabaseCloudSync {
 
   static async pullAll(isInitial = false) {
     try {
-      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?select=key,value,updated_at`, {
+      const res = await fetch(`${this.SUPABASE_URL}/rest/v1/${this.TABLE}?select=store_key,store_data,updated_at`, {
         method: 'GET',
         headers: this.getHeaders(),
         cache: 'no-store'
@@ -2649,17 +2649,17 @@ class SupabaseCloudSync {
 
       let anyChanged = false;
       rows.forEach(row => {
-        if (!row || !row.key || row.value === undefined) return;
-        const prevTs = this.lastTimestamps[row.key];
-        const currentLocalStr = localStorage.getItem(row.key);
-        const incomingStr = JSON.stringify(row.value);
+        if (!row || !row.store_key || row.store_data === undefined) return;
+        const prevTs = this.lastTimestamps[row.store_key];
+        const currentLocalStr = localStorage.getItem(row.store_key);
+        const incomingStr = JSON.stringify(row.store_data);
 
         if (currentLocalStr !== incomingStr && (!prevTs || row.updated_at > prevTs)) {
-          localStorage.setItem(row.key, incomingStr);
-          this.lastTimestamps[row.key] = row.updated_at;
+          localStorage.setItem(row.store_key, incomingStr);
+          this.lastTimestamps[row.store_key] = row.updated_at;
           anyChanged = true;
         } else if (!prevTs && row.updated_at) {
-          this.lastTimestamps[row.key] = row.updated_at;
+          this.lastTimestamps[row.store_key] = row.updated_at;
         }
       });
 
