@@ -12,6 +12,80 @@
 </head>
 <body class="bg-slate-100 text-slate-800 h-screen overflow-hidden flex">
 
+  <!-- ================= PANTALLA DE ACCESO POR ROL (SUPERVISOR / TÉCNICO) ================= -->
+  <div id="roleGatewayOverlay" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 select-none">
+    <div class="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <!-- Encabezado -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white font-black text-xl shadow-lg shadow-blue-600/30">
+          MS
+        </div>
+        <h1 class="text-2xl font-black text-white tracking-tight">MOONSHINE FLOW</h1>
+        <p class="text-xs text-slate-400">Selecciona tu rol para ingresar al sistema</p>
+      </div>
+
+      <!-- Dos Botones Principales de Selección de Rol -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        
+        <!-- OPCIÓN 1: TÉCNICO DE MOONSHINE (Acceso Directo) -->
+        <button type="button" onclick="enterAsTechnician()" class="group text-left bg-slate-800/70 hover:bg-emerald-950/50 border-2 border-slate-700 hover:border-emerald-500 rounded-2xl p-5 transition flex flex-col justify-between space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl">
+              👷
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Acceso Directo
+            </span>
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white group-hover:text-emerald-300 transition">Técnico de Moonshine</h2>
+            <p class="text-xs text-slate-400 mt-1">Ver mi plan de trabajo del día, registrar avances y horas extra.</p>
+          </div>
+          <div class="pt-2 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold text-emerald-400">
+            <span>Entrar al Plan del Día</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </div>
+        </button>
+
+        <!-- OPCIÓN 2: SUPERVISOR (Con Contraseña) -->
+        <div id="supervisorRoleCard" class="bg-slate-800/70 border-2 border-slate-700 hover:border-blue-500 rounded-2xl p-5 transition flex flex-col justify-between space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-2xl">
+              🛡️
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              Con Contraseña
+            </span>
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white">Supervisor</h2>
+            <p class="text-xs text-slate-400 mt-1">Acceso completo a pedidos, bandeja de correo, plan semanal y catálogo.</p>
+          </div>
+
+          <!-- Botón inicial para mostrar campo de contraseña -->
+          <button type="button" id="btnShowSupervisorPass" onclick="showSupervisorPasswordPrompt()" class="pt-2 border-t border-slate-700/60 w-full flex items-center justify-between text-xs font-bold text-blue-400 hover:text-blue-300 transition">
+            <span>Ingresar como Supervisor</span>
+            <i data-lucide="lock" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Formulario de contraseña de supervisor -->
+          <form id="supervisorLoginForm" onsubmit="verifySupervisorPassword(event)" class="hidden pt-2 border-t border-slate-700/80 space-y-2.5">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">Contraseña de Supervisor</label>
+              <input type="password" id="inputSupervisorPin" placeholder="••••••••" required class="w-full text-xs bg-slate-950 text-white px-3 py-2 rounded-xl border border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 outline-none font-mono tracking-widest">
+              <p id="supervisorPinError" class="hidden text-[11px] font-bold text-red-400 mt-1">Contraseña incorrecta. Intenta de nuevo.</p>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-3 rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+              <span>Desbloquear Panel</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ================= BARRA LATERAL IZQUIERDA (SIDEBAR) ================= -->
   <aside id="appSidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 h-full z-30 select-none">
     <!-- Logo Compacto -->
@@ -97,11 +171,16 @@
 
     </nav>
 
-    <!-- Pie de Barra Lateral: Guía Rápida + Turno En Vivo -->
+    <!-- Pie de Barra Lateral: Guía Rápida + Cambiar Contraseña + Turno En Vivo -->
     <div class="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2 shrink-0">
       <button onclick="openModal('modalOfficialGuide')" class="w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 text-blue-300 hover:text-white hover:bg-blue-900/50 transition border border-blue-500/30 bg-blue-950/40">
         <i data-lucide="message-square" class="w-3.5 h-3.5 text-blue-400 shrink-0"></i>
         <span>Mensaje WhatsApp</span>
+      </button>
+
+      <button onclick="openChangePasswordModal()" class="w-full px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center space-x-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition border border-slate-800 bg-slate-900/80">
+        <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+        <span>Cambiar Contraseña</span>
       </button>
 
       <div class="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-xl border border-slate-800">
@@ -119,18 +198,23 @@
 
     <!-- Barra Superior Ultradelgada (Contextual) -->
     <header class="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-20">
-      <div class="truncate">
+      <div class="flex items-center space-x-3 truncate">
         <h1 id="topBarViewTitle" class="text-sm font-black text-slate-900 truncate">Nuevo Pedido</h1>
         <p id="topBarViewSubtitle" class="hidden"></p>
+        <span id="topBarRoleBadge" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full border"></span>
       </div>
       <div class="flex items-center space-x-2 shrink-0">
-        <button onclick="triggerAutoPlan()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5" title="Actualizar Plan 24/7">
+        <button id="btnTopUpdatePlan" onclick="triggerAutoPlan()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5" title="Actualizar Plan 24/7">
           <i data-lucide="zap" class="w-3.5 h-3.5"></i>
           <span class="hidden md:inline">Actualizar Plan</span>
         </button>
-        <button onclick="switchTab('tab-solicitud')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
+        <button id="btnTopNewOrder" onclick="switchTab('tab-solicitud')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center space-x-1.5">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
           <span>Nuevo Pedido</span>
+        </button>
+        <button onclick="openRoleGateway()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5" title="Cambiar de Rol (Supervisor / Técnico)">
+          <i data-lucide="user-Check" class="w-3.5 h-3.5"></i>
+          <span>Cambiar Rol</span>
         </button>
       </div>
     </header>
@@ -937,6 +1021,44 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: CAMBIAR CONTRASEÑA DE SUPERVISOR ================= -->
+  <div id="modalChangeSupervisorPass" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-base text-slate-900 flex items-center space-x-2">
+          <i data-lucide="key-round" class="w-5 h-5 text-blue-600"></i>
+          <span>Cambiar Contraseña de Supervisor</span>
+        </h3>
+        <button onclick="closeModal('modalChangeSupervisorPass')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="changeSupervisorPassForm" onsubmit="handleChangeSupervisorPassword(event)" class="space-y-4 pt-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Contraseña Actual *</label>
+          <input type="password" id="currentSupervisorPassInput" required placeholder="Ingresa la contraseña actual" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nueva Contraseña *</label>
+          <input type="password" id="newSupervisorPassInput" required minlength="4" placeholder="Mínimo 4 caracteres" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Confirmar Nueva Contraseña *</label>
+          <input type="password" id="confirmSupervisorPassInput" required minlength="4" placeholder="Repite la nueva contraseña" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('modalChangeSupervisorPass')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Guardar Contraseña</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ================= MODAL: PEGAR CORREO O SOLICITUD ================= -->
   <div id="modalPasteEmail" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
@@ -1264,8 +1386,132 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       }
     };
 
+    // Rol activo en la sesión ('supervisor' | 'tecnico' | null)
+    let currentAppRole = null;
+
+    function openRoleGateway() {
+      currentAppRole = null;
+      const overlay = document.getElementById('roleGatewayOverlay');
+      if (overlay) overlay.classList.remove('hidden');
+
+      const loginForm = document.getElementById('supervisorLoginForm');
+      const btnShow = document.getElementById('btnShowSupervisorPass');
+      const errEl = document.getElementById('supervisorPinError');
+      const pinInput = document.getElementById('inputSupervisorPin');
+
+      if (loginForm) loginForm.classList.add('hidden');
+      if (btnShow) btnShow.classList.remove('hidden');
+      if (errEl) errEl.classList.add('hidden');
+      if (pinInput) pinInput.value = '';
+      lucide.createIcons();
+    }
+
+    function showSupervisorPasswordPrompt() {
+      const loginForm = document.getElementById('supervisorLoginForm');
+      const btnShow = document.getElementById('btnShowSupervisorPass');
+      const pinInput = document.getElementById('inputSupervisorPin');
+      if (btnShow) btnShow.classList.add('hidden');
+      if (loginForm) loginForm.classList.remove('hidden');
+      if (pinInput) setTimeout(() => pinInput.focus(), 50);
+    }
+
+    function verifySupervisorPassword(e) {
+      e.preventDefault();
+      const pinInput = document.getElementById('inputSupervisorPin');
+      const errEl = document.getElementById('supervisorPinError');
+      const entered = (pinInput ? pinInput.value : '').trim();
+      const validPin = MoonshineStore.getSupervisorPin();
+
+      if (entered === validPin) {
+        if (errEl) errEl.classList.add('hidden');
+        enterAsSupervisor();
+      } else {
+        if (errEl) errEl.classList.remove('hidden');
+        if (pinInput) pinInput.select();
+      }
+    }
+
+    function enterAsSupervisor() {
+      currentAppRole = 'supervisor';
+      const overlay = document.getElementById('roleGatewayOverlay');
+      if (overlay) overlay.classList.add('hidden');
+
+      const sidebar = document.getElementById('appSidebar');
+      if (sidebar) sidebar.classList.remove('hidden');
+
+      const btnUpdate = document.getElementById('btnTopUpdatePlan');
+      const btnNewOrder = document.getElementById('btnTopNewOrder');
+      if (btnUpdate) btnUpdate.classList.remove('hidden');
+      if (btnNewOrder) btnNewOrder.classList.remove('hidden');
+
+      const roleBadge = document.getElementById('topBarRoleBadge');
+      if (roleBadge) {
+        roleBadge.textContent = '🛡️ Supervisor';
+        roleBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200';
+      }
+
+      switchTab('tab-solicitud');
+      showToast('Sesión iniciada como Supervisor.', 'success');
+    }
+
+    function enterAsTechnician() {
+      currentAppRole = 'tecnico';
+      const overlay = document.getElementById('roleGatewayOverlay');
+      if (overlay) overlay.classList.add('hidden');
+
+      const sidebar = document.getElementById('appSidebar');
+      if (sidebar) sidebar.classList.add('hidden');
+
+      const btnUpdate = document.getElementById('btnTopUpdatePlan');
+      const btnNewOrder = document.getElementById('btnTopNewOrder');
+      if (btnUpdate) btnUpdate.classList.add('hidden');
+      if (btnNewOrder) btnNewOrder.classList.add('hidden');
+
+      const roleBadge = document.getElementById('topBarRoleBadge');
+      if (roleBadge) {
+        roleBadge.textContent = '👷 Técnico de Moonshine';
+        roleBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200';
+      }
+
+      switchTab('tab-taller');
+      showToast('Bienvenido a tu plan de trabajo del día.', 'info');
+    }
+
+    function openChangePasswordModal() {
+      const form = document.getElementById('changeSupervisorPassForm');
+      if (form) form.reset();
+      openModal('modalChangeSupervisorPass');
+    }
+
+    function handleChangeSupervisorPassword(e) {
+      e.preventDefault();
+      const currentInput = document.getElementById('currentSupervisorPassInput').value.trim();
+      const newInput = document.getElementById('newSupervisorPassInput').value.trim();
+      const confirmInput = document.getElementById('confirmSupervisorPassInput').value.trim();
+
+      if (currentInput !== MoonshineStore.getSupervisorPin()) {
+        showToast('La contraseña actual no es correcta.', 'error');
+        return;
+      }
+      if (newInput.length < 4) {
+        showToast('La nueva contraseña debe tener al menos 4 caracteres.', 'error');
+        return;
+      }
+      if (newInput !== confirmInput) {
+        showToast('La nueva contraseña y la confirmación no coinciden.', 'error');
+        return;
+      }
+
+      MoonshineStore.setSupervisorPin(newInput);
+      closeModal('modalChangeSupervisorPass');
+      showToast('Contraseña de Supervisor actualizada correctamente.', 'success');
+    }
+
     // Cambiar pestañas desde la barra lateral
     function switchTab(tabId) {
+      if (currentAppRole === 'tecnico' && tabId !== 'tab-taller') {
+        tabId = 'tab-taller';
+      }
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       const activeEl = document.getElementById(tabId);
       if (activeEl) activeEl.classList.remove('hidden');

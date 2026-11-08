@@ -723,7 +723,8 @@ const DEFAULT_SETTINGS = {
   sharepointSiteUrl: 'https://axiom.sharepoint.com/sites/MoonshineOperations',
   sharepointListName: 'Pedidos_Moonshine',
   powerAutomateWebhook: '',
-  notificationEmail: 'supervisores_moonshine@axiom.com'
+  notificationEmail: 'supervisores_moonshine@axiom.com',
+  supervisorPin: '12345678'
 };
 
 // ==========================================
@@ -1052,11 +1053,23 @@ class MoonshineStore {
   }
 
   static getSettings() {
-    return this.get(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+    const stored = this.get(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+    return { ...DEFAULT_SETTINGS, ...(stored || {}) };
   }
 
   static saveSettings(settings) {
     this.set(STORAGE_KEYS.SETTINGS, settings);
+  }
+
+  static getSupervisorPin() {
+    const settings = this.getSettings();
+    return settings.supervisorPin || '12345678';
+  }
+
+  static setSupervisorPin(newPin) {
+    const settings = this.getSettings();
+    settings.supervisorPin = String(newPin).trim();
+    this.saveSettings(settings);
   }
 
   static getPlan() {
@@ -2643,6 +2656,7 @@ class SupabaseCloudSync {
         await this.pushKey(STORAGE_KEYS.TECHNICIANS, MoonshineStore.getTechnicians());
         await this.pushKey(STORAGE_KEYS.ROSTER_SCHEDULE, MoonshineStore.getRosterSchedule());
         await this.pushKey(STORAGE_KEYS.OVERTIME, MoonshineStore.getOvertime());
+        await this.pushKey(STORAGE_KEYS.SETTINGS, MoonshineStore.getSettings());
         await this.pushKey(OutlookSyncManager.STORAGE_KEY, OutlookSyncManager.getState());
         return;
       }
