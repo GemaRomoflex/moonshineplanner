@@ -95,7 +95,7 @@
               <h3 class="text-sm font-black text-white group-hover:text-indigo-300 transition">Plan de Entregas y Estatus de Pedidos</h3>
               <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Vista Pública / Solicitantes</span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">Consulta todos los pedidos pendientes por solicitante y su fecha compromiso de entrega (+3 días de holgura).</p>
+            <p class="text-xs text-slate-400 mt-0.5">Consulta todos los pedidos pendientes por solicitante y su fecha programada de entrega.</p>
           </div>
         </div>
         <div class="text-xs font-bold text-indigo-400 flex items-center space-x-1 shrink-0">
@@ -649,13 +649,13 @@
         <div class="space-y-1">
           <div class="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Estatus de Entregas en Tiempo Real (+3 Días de Holgura Incluidos)</span>
+            <span>Estatus y Fechas de Entrega en Tiempo Real</span>
           </div>
           <h2 class="text-xl font-black tracking-tight flex items-center space-x-2">
             <span>📦 Plan de Entregas — Estatus de Pedidos Pendientes</span>
           </h2>
           <p class="text-xs text-slate-300">
-            Consulta el plan oficial de entregas por solicitante y área. Todas las fechas compromiso ya incluyen los <strong>3 días de holgura</strong> para liberación de calidad.
+            Consulta el plan oficial de entregas y el avance en tiempo real de cada estructura por solicitante y área.
           </p>
         </div>
 
@@ -727,7 +727,7 @@
                 <th class="py-3 px-3">Estructura Solicitada</th>
                 <th class="py-3 px-3 text-center">Prioridad</th>
                 <th class="py-3 px-3 text-center">Estatus y Avance</th>
-                <th class="py-3 px-3 rounded-tr-xl">Fecha de Entrega (+3 Días Holgura)</th>
+                <th class="py-3 px-3 rounded-tr-xl">Fecha de Entrega</th>
               </tr>
             </thead>
             <tbody id="delivOrdersTableBody" class="divide-y divide-slate-200">
@@ -879,7 +879,7 @@
               <i data-lucide="mail" class="w-5 h-5 text-blue-600"></i>
               <span>Correo de Plan de Entregas — Pedidos Pendientes (Outlook)</span>
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5">Muestra todos los pedidos pendientes con nombre del solicitante y fecha de entrega (+3 días de holgura), sin mostrar técnicos ni turnos internos.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Muestra todos los pedidos pendientes con nombre del solicitante y fecha programada de entrega, sin mostrar técnicos ni turnos internos.</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -1259,8 +1259,8 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
           </div>
           <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
             <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-black inline-flex items-center justify-center mb-1.5 text-xs">4</span>
-            <h4 class="font-bold text-slate-900 text-sm">Entrega con +3 Días de Holgura</h4>
-            <p class="text-slate-500 mt-1">El motor calcula la fecha real de término sumándole 3 días de colchón para contingencias y calidad garantizada.</p>
+            <h4 class="font-bold text-slate-900 text-sm">Fecha Compromiso de Entrega</h4>
+            <p class="text-slate-500 mt-1">El sistema asigna tu fecha oficial de entrega de acuerdo con la prioridad y la carga de producción.</p>
           </div>
         </div>
 
@@ -1495,7 +1495,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       },
       'tab-entregas': {
         title: 'Plan de Entregas y Estatus de Pedidos',
-        subtitle: 'Fechas compromiso de entrega por solicitante (+3 días de holgura incluidos)'
+        subtitle: 'Consulta de estatus y fechas programadas de entrega por solicitante'
       },
       'tab-planificador': {
         title: 'Plan Maestro Semanal 24/7 (Interno Taller)',
@@ -1519,7 +1519,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       },
       'tab-config': {
         title: 'Correo del Plan de Pedidos & Sincronización CSV',
-        subtitle: 'Generador de correo de pedidos pendientes con fechas de entrega (+3 días de holgura)'
+        subtitle: 'Generador de correo de pedidos pendientes con fechas programadas de entrega'
       }
     };
 
@@ -2325,7 +2325,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
     }
 
     function copyWhatsAppGuideText() {
-      const text = `Hola! 👋 Para que tu solicitud de Moonshine sea tomada en cuenta, programada con los técnicos en el plan de turnos y recibir tu fecha de entrega formal con holgura de calidad, por favor regístrala por el canal oficial en este enlace:\n👉 https://gemaromoflex.github.io/moonshineplanner/\nUna vez registrada, el supervisor le asignará prioridad y recibirás tu confirmación formal por correo. ¡Muchas gracias!`;
+      const text = `Hola! 👋 Para que tu solicitud de Moonshine sea tomada en cuenta, programada con los técnicos en el plan de turnos y recibir tu fecha de entrega formal, por favor regístrala por el canal oficial en este enlace:\n👉 https://gemaromoflex.github.io/moonshineplanner/\nUna vez registrada, el supervisor le asignará prioridad y recibirás tu confirmación formal por correo. ¡Muchas gracias!`;
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -2684,7 +2684,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
             <td class="py-3.5 px-3 bg-emerald-50/50 border-l-2 border-emerald-500">
               <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-700">Se entrega el día:</div>
               <div class="font-black text-emerald-950 text-xs mt-0.5">📅 ${deliveryDateFormatted}</div>
-              <div class="text-[10px] text-emerald-600 font-semibold">+3 días de holgura incluidos</div>
+              <div class="text-[10px] text-emerald-600 font-semibold">Fecha programada</div>
             </td>
           </tr>
         `;
@@ -2731,7 +2731,6 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
             </td>
             <td class="py-3 px-3 text-emerald-800 font-bold">
               📅 ${deliveryWithBuffer}
-              <span class="block text-[10px] text-emerald-600 font-normal">+3 días holgura</span>
             </td>
             <td class="py-3 px-3 text-center">
               <button onclick="openOrderDetailsModal('${o.id}')" class="text-blue-600 hover:text-blue-800 p-1" title="Ver Detalles">
@@ -3336,7 +3335,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       const settings = MoonshineStore.getSettings();
       const todayStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
       const subject = encodeURIComponent(`[Moonshine] Plan de Entregas y Estatus de Pedidos Pendientes — ${todayStr}`);
-      const body = encodeURIComponent(`Estimado equipo:\n\nA continuación se comparte el plan de entregas y estatus actual de los pedidos pendientes en Moonshine (las fechas compromiso ya incluyen los +3 días de holgura de calidad).\n\n(Presiona Ctrl + V aquí después de hacer clic en "Copiar Correo" en el portal, o consulta el estatus en vivo en: https://gemaromoflex.github.io/moonshineplanner/?vista=entregas )\n\nAtentamente,\nEquipo Moonshine`);
+      const body = encodeURIComponent(`Estimado equipo:\n\nA continuación se comparte el plan de entregas y estatus actual de los pedidos pendientes en Moonshine con sus fechas programadas de entrega.\n\n(Presiona Ctrl + V aquí después de hacer clic en "Copiar Correo" en el portal, o consulta el estatus en vivo en: https://gemaromoflex.github.io/moonshineplanner/?vista=entregas )\n\nAtentamente,\nEquipo Moonshine`);
 
       window.location.href = `mailto:${settings.notificationEmail}?subject=${subject}&body=${body}`;
     }

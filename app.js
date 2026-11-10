@@ -1333,7 +1333,7 @@ class SchedulingEngine {
         updatedOrder.fechaCompromisoTexto = `${commitmentDayName} ${commitmentShortStr}`;
         updatedOrder.diasHolgura = 3;
         updatedOrder.fechaEntregaInterna = `${lastAssignedSlot.dayName} ${lastAssignedSlot.dateShortStr} (${lastAssignedSlot.shiftLabel})`;
-        updatedOrder.fechaEntregaEstimada = `${commitmentDayName} ${commitmentShortStr} (+3 días holgura)`;
+        updatedOrder.fechaEntregaEstimada = `${commitmentDayName} ${commitmentShortStr}`;
 
         if (updatedOrder.estado === 'Pendiente') {
           updatedOrder.estado = 'Programado';
@@ -1551,7 +1551,6 @@ class EmailReportGenerator {
             <td style="padding: 11px 12px; background-color: #f0fdf4; border-left: 3px solid #16a34a;">
               <div style="font-size: 11px; color: #15803d; font-weight: 600; text-transform: uppercase;">Se entrega el día:</div>
               <div style="font-size: 13px; font-weight: 800; color: #14532d; margin-top: 2px;">📅 ${deliveryDateFormatted}</div>
-              <div style="font-size: 10px; color: #16a34a; margin-top: 1px;">Incluye +3 días de holgura</div>
             </td>
           </tr>
         `;
@@ -1570,7 +1569,7 @@ class EmailReportGenerator {
 
         <div style="padding: 22px 26px;">
           <p style="margin-top: 0; color: #334155; font-size: 13.5px; line-height: 1.55;">
-            Estimado equipo: A continuación se comparte el <strong>estatus actual y la fecha compromiso de entrega</strong> de todos los pedidos de estructuras registrados en Moonshine. Las fechas indicadas ya contemplan los <strong>3 días de holgura</strong> para aseguramiento de calidad y entrega en área:
+            Estimado equipo: A continuación se comparte el <strong>estatus actual y la fecha programada de entrega</strong> de todos los pedidos de estructuras registrados en Moonshine:
           </p>
 
           <!-- Resumen Rápido -->
@@ -1611,8 +1610,8 @@ class EmailReportGenerator {
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 18px;">
             📌 <strong>Información importante para solicitantes:</strong>
             <ul style="margin: 6px 0 0 0; padding-left: 20px; line-height: 1.6;">
-              <li>La <strong>Fecha de Entrega</strong> mostrada para cada pedido ya incluye los <strong>3 días de holgura</strong> posteriores a su armado para validación y liberación.</li>
               <li>Las solicitudes con prioridad <strong>Urgente (Línea Parada)</strong> tienen preferencia en la fila de producción.</li>
+              <li>Al concluir la estructura y pasar a <strong>Listo para Entrega</strong>, se coordinará la entrega en el área destino.</li>
               <li>Puedes consultar en vivo el estatus de todos los pedidos en: <a href="https://gemaromoflex.github.io/moonshineplanner/?vista=entregas" style="color: #2563eb; font-weight: bold;">Portal de Estatus de Entregas Moonshine</a>.</li>
             </ul>
           </div>
@@ -2280,7 +2279,7 @@ Tu solicitud de estructura Moonshine ha sido aprobada y ya se encuentra programa
 🚨 Prioridad Asignada: ${order.prioridad}
 
 📅 FECHA COMPROMISO DE ENTREGA:
-🚚 Se entregará el día: ${deliveryDateStr} (Incluye +3 días de holgura)
+🚚 Se entregará el día: ${deliveryDateStr}
 
 Puedes consultar en vivo el estatus de tu pedido y el plan de entregas en nuestro portal:
 https://gemaromoflex.github.io/moonshineplanner/?vista=entregas
