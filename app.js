@@ -1108,13 +1108,15 @@ class SchedulingEngine {
       'Baja': 1
     };
 
-    // Separamos las órdenes activas (Pendientes, Programadas o En Fabricación)
+    // Separamos las órdenes por programar en turnos vs las que ya están Listas para Entrega
     const activeOrders = orders.filter(o => 
       o.estado !== 'Entregado' && 
       o.estado !== 'Cancelado' && 
+      o.estado !== 'Listo para Entrega' &&
       o.estado !== 'Por Aprobar' && 
       o.estado !== 'Pendiente de Aprobación'
     );
+    const readyForDeliveryOrders = orders.filter(o => o.estado === 'Listo para Entrega');
 
     // Ordenamiento del backlog:
     // 1. Órdenes con avance previo en proceso (Carry-over) van primero para concluirse
@@ -1323,10 +1325,15 @@ class SchedulingEngine {
         const finishDate = new Date(lastAssignedSlot.dateObj);
         const commitmentDate = addBufferDays(finishDate, 3);
         const commitmentDateIso = commitmentDate.toISOString().split('T')[0];
+        const daysEs = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const commitmentDayName = daysEs[commitmentDate.getDay()];
+        const commitmentShortStr = commitmentDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 
         updatedOrder.fechaCompromisoEntrega = commitmentDateIso;
+        updatedOrder.fechaCompromisoTexto = `${commitmentDayName} ${commitmentShortStr}`;
         updatedOrder.diasHolgura = 3;
-        updatedOrder.fechaEntregaEstimada = `${lastAssignedSlot.dayName} ${lastAssignedSlot.dateShortStr} (${lastAssignedSlot.shiftLabel})`;
+        updatedOrder.fechaEntregaInterna = `${lastAssignedSlot.dayName} ${lastAssignedSlot.dateShortStr} (${lastAssignedSlot.shiftLabel})`;
+        updatedOrder.fechaEntregaEstimada = `${commitmentDayName} ${commitmentShortStr} (+3 días holgura)`;
 
         if (updatedOrder.estado === 'Pendiente') {
           updatedOrder.estado = 'Programado';
@@ -1335,8 +1342,10 @@ class SchedulingEngine {
         updatedOrder.semanaProgramada = weeksNeeded;
         updatedOrder.diaEntrega = 'Semana Posterior';
         updatedOrder.turnoEntrega = 'T1';
-        updatedOrder.fechaEntregaEstimada = 'En backlog por capacidad de taller';
+        updatedOrder.fechaEntregaInterna = 'En backlog por capacidad de taller';
+        updatedOrder.fechaEntregaEstimada = 'Por confirmar en plan';
         updatedOrder.fechaCompromisoEntrega = 'Por definir';
+        updatedOrder.fechaCompromisoTexto = 'Por definir';
         updatedOrder.diasHolgura = 3;
       }
 
@@ -1344,9 +1353,17 @@ class SchedulingEngine {
       scheduledOrders.push(updatedOrder);
     });
 
+    // Órdenes que ya están Listas para Entrega conservan su fecha compromiso o entrega inmediata
+    const normalizedReadyOrders = readyForDeliveryOrders.map(o => ({
+      ...o,
+      diasHolgura: 3,
+      fechaCompromisoTexto: o.fechaCompromisoTexto || 'Listo para Entrega Inmediata',
+      fechaEntregaEstimada: o.fechaCompromisoTexto ? `${o.fechaCompromisoTexto} (Listo)` : 'Listo para Entrega Inmediata'
+    }));
+
     // Guardar órdenes y plan
-    const completedOrders = orders.filter(o => o.estado === 'Entregado' || o.estado === 'Cancelado');
-    const allUpdatedOrders = [...scheduledOrders, ...completedOrders];
+    const completedOrders = orders.filter(o => o.estado === 'Entregado' || o.estado === 'Cancelado' || o.estado === 'Por Aprobar' || o.estado === 'Pendiente de Aprobación');
+    const allUpdatedOrders = [...scheduledOrders, ...normalizedReadyOrders, ...completedOrders];
     MoonshineStore.saveOrders(allUpdatedOrders);
 
     const generatedPlan = {
@@ -1395,97 +1412,195 @@ class SchedulingEngine {
 }
 
 // ==========================================
-// 4. GENERADOR DE CORREOS PARA OUTLOOK
+// 4. GENERADOR DE CORREOS PARA OUTLOOK (PLAN DE ENTREGAS DE PEDIDOS PENDIENTES)
 // ==========================================
 class EmailReportGenerator {
   /**
-   * Genera el HTML formateado para Outlook del Plan Diario (T1, T2, T3 de hoy)
+   * Formatea la fecha compromiso con +3 días de holgura en texto amigable en español
    */
-  static generateDailyEmailHtml(targetDayName = null) {
-    const plan = MoonshineStore.getPlan() || SchedulingEngine.runAutoSchedule();
-    const settings = MoonshineStore.getSettings();
-    const currentShiftInfo = SchedulingEngine.getCurrentRealShift();
-    const day = targetDayName || currentShiftInfo.dayName;
+  static formatDeliveryDateWithBuffer(order) {
+    if (order.estado === 'Listo para Entrega') {
+      return '✅ Listo para Entrega Inmediata';
+    }
+    if (order.fechaCompromisoTexto && order.fechaCompromisoTexto !== 'Por definir') {
+      return order.fechaCompromisoTexto;
+    }
+    if (order.fechaCompromisoEntrega && order.fechaCompromisoEntrega !== 'Por definir') {
+      const parts = order.fechaCompromisoEntrega.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        if (!isNaN(d.getTime())) {
+          const daysEs = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+          const shortStr = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+          return `${daysEs[d.getDay()]} ${shortStr}`;
+        }
+      }
+      return order.fechaCompromisoEntrega;
+    }
+    return order.fechaEntregaEstimada || 'En programación';
+  }
 
-    // Obtenemos los 3 turnos para este día
-    const daySlots = plan.grid.filter(slot => slot.dayName === day);
+  /**
+   * Genera el HTML formateado para Outlook del Plan de Todos los Pedidos Pendientes
+   * (Sin mostrar qué técnico hace cada estructura ni los turnos internos; muestra de quién es cada pedido y qué día se entrega con +3 días de holgura)
+   */
+  static generateDailyEmailHtml(filterMode = 'ALL') {
+    if (!MoonshineStore.getPlan()) {
+      SchedulingEngine.runAutoSchedule();
+    }
+    const orders = MoonshineStore.getOrders();
+    const settings = MoonshineStore.getSettings();
+    const todayFormatted = new Date().toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Filtrar todos los pedidos pendientes (que aún no se han entregado ni cancelado)
+    let pendingOrders = orders.filter(o =>
+      o.estado !== 'Entregado' &&
+      o.estado !== 'Cancelado' &&
+      o.estado !== 'Por Aprobar' &&
+      o.estado !== 'Pendiente de Aprobación'
+    );
+
+    if (filterMode === 'URGENT') {
+      pendingOrders = pendingOrders.filter(o => o.prioridad === 'Crítica' || o.prioridad === 'Alta');
+    } else if (filterMode === 'WIP') {
+      pendingOrders = pendingOrders.filter(o => o.estado === 'En Fabricación' || o.estado === 'Listo para Entrega');
+    }
+
+    // Ordenar: 1) Listo para Entrega, 2) En Fabricación, 3) Programado por fecha de compromiso ascendente y prioridad
+    const statusOrder = { 'Listo para Entrega': 1, 'En Fabricación': 2, 'Programado': 3, 'Pendiente': 4 };
+    const priorityWeights = { 'Crítica': 4, 'Alta': 3, 'Normal': 2, 'Baja': 1 };
+
+    pendingOrders.sort((a, b) => {
+      const sDiff = (statusOrder[a.estado] || 9) - (statusOrder[b.estado] || 9);
+      if (sDiff !== 0) return sDiff;
+
+      const dateA = a.fechaCompromisoEntrega && a.fechaCompromisoEntrega !== 'Por definir' ? a.fechaCompromisoEntrega : '2099-12-31';
+      const dateB = b.fechaCompromisoEntrega && b.fechaCompromisoEntrega !== 'Por definir' ? b.fechaCompromisoEntrega : '2099-12-31';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+
+      return (priorityWeights[b.prioridad] || 0) - (priorityWeights[a.prioridad] || 0);
+    });
+
+    const totalPending = pendingOrders.length;
+    const totalInProcess = pendingOrders.filter(o => o.estado === 'En Fabricación').length;
+    const totalReady = pendingOrders.filter(o => o.estado === 'Listo para Entrega').length;
 
     let rowsHtml = '';
-    daySlots.forEach(slot => {
-      const shiftColor = slot.shiftId === 1 ? '#2563eb' : (slot.shiftId === 2 ? '#d97706' : '#7c3aed');
-      const techBadge = slot.techsCount === 1 
-        ? '<span style="color:#b45309;font-weight:bold;">1 Técnico (Descanso rotativo)</span>'
-        : '<span style="color:#15803d;font-weight:bold;">2 Técnicos (Capacidad plena)</span>';
-
-      rowsHtml += `
-        <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-          <td colspan="6" style="padding: 10px 14px; font-weight: bold; color: ${shiftColor}; font-size: 14px;">
-            ✦ ${slot.shiftLabel} (${slot.shiftHoursStr}) &nbsp;|&nbsp; Dotación: ${techBadge} &nbsp;|&nbsp; Capacidad: ${slot.allocatedHours.toFixed(1)}h / ${slot.totalCapacityHours}h (${Math.round((slot.allocatedHours/slot.totalCapacityHours)*100)}% ocupado)
+    if (pendingOrders.length === 0) {
+      rowsHtml = `
+        <tr>
+          <td colspan="6" style="padding: 20px 14px; color: #64748b; font-style: italic; text-align: center;">
+            No hay pedidos pendientes en este momento.
           </td>
         </tr>
       `;
+    } else {
+      pendingOrders.forEach((o, idx) => {
+        const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
 
-      if (slot.items.length === 0) {
+        let pBadgeColor = '#2563eb';
+        let pLabel = o.prioridad || 'Normal';
+        if (pLabel === 'Crítica') { pBadgeColor = '#dc2626'; pLabel = '🚨 Urgente'; }
+        else if (pLabel === 'Alta') { pBadgeColor = '#ea580c'; pLabel = '⚡ Alta'; }
+        else if (pLabel === 'Normal') { pBadgeColor = '#2563eb'; pLabel = '🔷 Media'; }
+        else if (pLabel === 'Baja') { pBadgeColor = '#64748b'; pLabel = '⚪ Baja'; }
+
+        const totalHrs = o.horasEstimadas || 4;
+        const doneHrs = o.progresoHoras || 0;
+        const pct = o.estado === 'Listo para Entrega' ? 100 : Math.min(99, Math.round((doneHrs / totalHrs) * 100));
+
+        let statusBadgeHtml = '';
+        if (o.estado === 'Listo para Entrega') {
+          statusBadgeHtml = `<span style="background-color:#dcfce7;color:#166534;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:bold;border:1px solid #86efac;display:inline-block;">✅ Listo para Entrega</span>`;
+        } else if (o.estado === 'En Fabricación') {
+          statusBadgeHtml = `<span style="background-color:#fef3c7;color:#92400e;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:bold;border:1px solid #fde68a;display:inline-block;">🔨 En Fabricación (${pct}%)</span>`;
+        } else {
+          statusBadgeHtml = `<span style="background-color:#dbeafe;color:#1e40af;padding:4px 9px;border-radius:12px;font-size:11px;font-weight:bold;border:1px solid #bfdbfe;display:inline-block;">📋 Programado en Plan</span>`;
+        }
+
+        const deliveryDateFormatted = this.formatDeliveryDateWithBuffer(o);
+
         rowsHtml += `
-          <tr>
-            <td colspan="6" style="padding: 12px 14px; color: #64748b; font-style: italic; text-align: center;">
-              Sin estructuras programadas en este turno. Capacidad disponible para kaizen o preventivo.
+          <tr style="background-color: ${rowBg}; border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 11px 12px; font-family: Consolas, monospace; font-weight: bold; color: #1e293b; font-size: 12px;">
+              ${o.id}
+            </td>
+            <td style="padding: 11px 12px;">
+              <div style="font-weight: 700; color: #0f172a; font-size: 13px;">👤 Pedido de: ${o.solicitante || 'Solicitante'}</div>
+              <div style="font-size: 11px; color: #475569; margin-top: 2px;">📍 Área: <strong>${o.area || 'Planta'}</strong></div>
+            </td>
+            <td style="padding: 11px 12px;">
+              <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${o.estructuraNombre}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                Cantidad: <strong>${o.cantidad || 1} pza(s)</strong> &bull; ${o.tipoTrabajo || 'Estructura Nueva'}
+              </div>
+            </td>
+            <td style="padding: 11px 12px; text-align: center;">
+              <span style="background-color: ${pBadgeColor}; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block;">
+                ${pLabel}
+              </span>
+            </td>
+            <td style="padding: 11px 12px; text-align: center;">
+              ${statusBadgeHtml}
+            </td>
+            <td style="padding: 11px 12px; background-color: #f0fdf4; border-left: 3px solid #16a34a;">
+              <div style="font-size: 11px; color: #15803d; font-weight: 600; text-transform: uppercase;">Se entrega el día:</div>
+              <div style="font-size: 13px; font-weight: 800; color: #14532d; margin-top: 2px;">📅 ${deliveryDateFormatted}</div>
+              <div style="font-size: 10px; color: #16a34a; margin-top: 1px;">Incluye +3 días de holgura</div>
             </td>
           </tr>
         `;
-      } else {
-        slot.items.forEach(item => {
-          let pBadgeColor = '#3b82f6';
-          let pTextColor = '#ffffff';
-          if (item.prioridad === 'Crítica') { pBadgeColor = '#dc2626'; }
-          else if (item.prioridad === 'Alta') { pBadgeColor = '#ea580c'; }
-          else if (item.prioridad === 'Baja') { pBadgeColor = '#64748b'; }
-
-          rowsHtml += `
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #1e293b;">${item.orderId}</td>
-              <td style="padding: 8px 12px; font-weight: 600; color: #0f172a;">${item.estructuraNombre} <span style="display:block;font-size:10px;color:#64748b;font-weight:normal;">${item.tipoTrabajo || 'Estructura Nueva'}</span></td>
-              <td style="padding: 8px 12px; color: #475569;">${item.area} <span style="font-size:11px;color:#94a3b8;">(${item.solicitante})</span></td>
-              <td style="padding: 8px 12px; font-size:12px; font-weight:bold; color: #1e40af;">👤 ${item.tecnicoAsignadoNombre || 'Técnico de Turno'}</td>
-              <td style="padding: 8px 12px; text-align: center;">
-                <span style="background-color: ${pBadgeColor}; color: ${pTextColor}; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-                  ${item.prioridad}
-                </span>
-              </td>
-              <td style="padding: 8px 12px; text-align: center; font-weight: bold; color: #0f172a;">${item.horasEnEsteTurno} hrs</td>
-              <td style="padding: 8px 12px; text-align: center;">
-                ${item.esTermino ? '<span style="color:#16a34a;font-weight:bold;">✔ Concluye y Listo</span>' : '<span style="color:#475569;">Continúa siguiente turno</span>'}
-              </td>
-            </tr>
-          `;
-        });
-      }
-    });
+      });
+    }
 
     const fullHtml = `
-      <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; max-width: 850px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #ffffff; padding: 20px 24px;">
-          <h2 style="margin: 0 0 6px 0; font-size: 20px; letter-spacing: -0.5px;">Taller Moonshine — Plan Diario de Producción</h2>
-          <p style="margin: 0; font-size: 13px; opacity: 0.9;">
-            Día Programado: <strong>${day}</strong> &nbsp;|&nbsp; ${settings.plantName} &nbsp;|&nbsp; Operación 24/7 (Turnos 1, 2 y 3)
+      <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; max-width: 920px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden;">
+        <!-- Encabezado Corporativo -->
+        <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 22px 26px;">
+          <h2 style="margin: 0 0 6px 0; font-size: 20px; letter-spacing: -0.3px;">📦 Plan de Entregas — Pedidos Pendientes Moonshine</h2>
+          <p style="margin: 0; font-size: 13px; color: #cbd5e1;">
+            Actualizado al: <strong style="color:#ffffff;">${todayFormatted}</strong> &nbsp;|&nbsp; ${settings.plantName}
           </p>
         </div>
 
-        <div style="padding: 20px 24px;">
-          <p style="margin-top: 0; color: #334155; font-size: 14px; line-height: 1.5;">
-            Estimado equipo de Operaciones y Manufactura: A continuación se presenta el desglose oficial de estructuras y fixtures programados para fabricación en el taller de Moonshine para el día <strong>${day}</strong> distribuido en los 3 turnos:
+        <div style="padding: 22px 26px;">
+          <p style="margin-top: 0; color: #334155; font-size: 13.5px; line-height: 1.55;">
+            Estimado equipo: A continuación se comparte el <strong>estatus actual y la fecha compromiso de entrega</strong> de todos los pedidos de estructuras registrados en Moonshine. Las fechas indicadas ya contemplan los <strong>3 días de holgura</strong> para aseguramiento de calidad y entrega en área:
           </p>
 
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 18px 0;">
+          <!-- Resumen Rápido -->
+          <table style="width: 100%; border-collapse: separate; border-spacing: 8px 0; margin: 14px 0 18px 0;">
+            <tr>
+              <td style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Pedidos Pendientes</div>
+                <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 2px;">${totalPending}</div>
+              </td>
+              <td style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #92400e; font-weight: bold; text-transform: uppercase;">En Fabricación</div>
+                <div style="font-size: 20px; font-weight: 900; color: #b45309; margin-top: 2px;">${totalInProcess}</div>
+              </td>
+              <td style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #166534; font-weight: bold; text-transform: uppercase;">Listos para Entrega</div>
+                <div style="font-size: 20px; font-weight: 900; color: #15803d; margin-top: 2px;">${totalReady}</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Tabla Principal de Pedidos Pendientes -->
+          <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 14px 0; border: 1px solid #e2e8f0;">
             <thead>
               <tr style="background-color: #0f172a; color: #ffffff;">
-                <th style="padding: 10px 12px; text-align: left;">Folio</th>
-                <th style="padding: 10px 12px; text-align: left;">Estructura / Fixture</th>
-                <th style="padding: 10px 12px; text-align: left;">Área / Solicitante</th>
-                <th style="padding: 10px 12px; text-align: left;">Técnico Asignado</th>
-                <th style="padding: 10px 12px; text-align: center;">Prioridad</th>
-                <th style="padding: 10px 12px; text-align: center;">Horas Turno</th>
-                <th style="padding: 10px 12px; text-align: center;">Estatus</th>
+                <th style="padding: 11px 12px; text-align: left; width: 11%;">Folio</th>
+                <th style="padding: 11px 12px; text-align: left; width: 24%;">Pedido de (Solicitante / Área)</th>
+                <th style="padding: 11px 12px; text-align: left; width: 25%;">Estructura Solicitada</th>
+                <th style="padding: 11px 12px; text-align: center; width: 10%;">Prioridad</th>
+                <th style="padding: 11px 12px; text-align: center; width: 14%;">Estatus</th>
+                <th style="padding: 11px 12px; text-align: left; width: 16%;">Fecha de Entrega</th>
               </tr>
             </thead>
             <tbody>
@@ -1493,18 +1608,18 @@ class EmailReportGenerator {
             </tbody>
           </table>
 
-          <div style="background-color: #f1f5f9; padding: 14px 18px; border-radius: 6px; font-size: 12px; color: #475569; margin-top: 20px;">
-            📌 <strong>Notas de Operación Moonshine:</strong>
-            <ul style="margin: 6px 0 0 0; padding-left: 20px;">
-              <li>Las prioridades <strong>Crítica</strong> (línea parada) desplazan inmediatamente las colas estándar.</li>
-              <li>Favor de validar que el material / componentes especiales de su pedido estén disponibles en taller antes de su turno de inicio.</li>
-              <li>Al finalizar la estructura se notificará vía correo para su recolección o entrega en línea.</li>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 18px;">
+            📌 <strong>Información importante para solicitantes:</strong>
+            <ul style="margin: 6px 0 0 0; padding-left: 20px; line-height: 1.6;">
+              <li>La <strong>Fecha de Entrega</strong> mostrada para cada pedido ya incluye los <strong>3 días de holgura</strong> posteriores a su armado para validación y liberación.</li>
+              <li>Las solicitudes con prioridad <strong>Urgente (Línea Parada)</strong> tienen preferencia en la fila de producción.</li>
+              <li>Puedes consultar en vivo el estatus de todos los pedidos en: <a href="https://gemaromoflex.github.io/moonshineplanner/?vista=entregas" style="color: #2563eb; font-weight: bold;">Portal de Estatus de Entregas Moonshine</a>.</li>
             </ul>
           </div>
         </div>
 
-        <div style="background-color: #e2e8f0; padding: 12px 24px; text-align: center; font-size: 11px; color: #64748b;">
-          Generado automáticamente por el Gestor de Producción Moonshine 24/7 &bull; Axiom Manufacturing
+        <div style="background-color: #f1f5f9; padding: 12px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
+          Taller Moonshine &bull; Planificación de Entregas y Estatus de Pedidos &bull; ${settings.plantName}
         </div>
       </div>
     `;
@@ -1513,67 +1628,10 @@ class EmailReportGenerator {
   }
 
   /**
-   * Genera el HTML del Resumen Semanal para directores y gerentes
+   * Genera el HTML del Resumen Semanal (también enfocado a pedidos y entregas sin nombres de técnicos)
    */
   static generateWeeklyEmailHtml() {
-    const orders = MoonshineStore.getOrders();
-    const settings = MoonshineStore.getSettings();
-    const activeOrders = orders.filter(o => o.estado !== 'Cancelado');
-
-    let rowsHtml = '';
-    activeOrders.forEach(o => {
-      let pBadgeColor = '#3b82f6';
-      if (o.prioridad === 'Crítica') pBadgeColor = '#dc2626';
-      else if (o.prioridad === 'Alta') pBadgeColor = '#ea580c';
-      else if (o.prioridad === 'Baja') pBadgeColor = '#64748b';
-
-      rowsHtml += `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 10px; font-family: monospace; font-weight: bold;">${o.id}</td>
-          <td style="padding: 8px 10px; font-weight: 600;">${o.estructuraNombre} <span style="display:block;font-size:10px;color:#64748b;font-weight:normal;">${o.tipoTrabajo || 'Estructura Nueva'}</span></td>
-          <td style="padding: 8px 10px;">${o.area}</td>
-          <td style="padding: 8px 10px; font-size:11px; font-weight:bold; color: #1e40af;">👤 ${o.tecnicoAsignadoNombre || 'Equipo Moonshine'}</td>
-          <td style="padding: 8px 10px; text-align: center;">
-            <span style="background-color: ${pBadgeColor}; color: white; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: bold;">
-              ${o.prioridad}
-            </span>
-          </td>
-          <td style="padding: 8px 10px; text-align: center;">${o.horasEstimadas}h</td>
-          <td style="padding: 8px 10px; font-weight: bold; color: #1e3a8a;">
-            ${o.fechaCompromisoEntrega ? `<strong>${o.fechaCompromisoEntrega}</strong> <span style="font-size:10px;color:#16a34a;display:block;">(+3d holgura)</span>` : (o.fechaEntregaEstimada || 'En backlog')}
-          </td>
-          <td style="padding: 8px 10px; text-align: center;">${o.estado}</td>
-        </tr>
-      `;
-    });
-
-    return `
-      <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; max-width: 950px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;">
-        <div style="background: #0f172a; color: #ffffff; padding: 20px 24px;">
-          <h2 style="margin: 0 0 6px 0;">Plan Maestro de Producción — Moonshine Shop</h2>
-          <p style="margin: 0; font-size: 13px; opacity: 0.85;">${settings.plantName} &bull; Estado de pedidos, asignación por técnico y fechas compromiso (+3 días holgura)</p>
-        </div>
-        <div style="padding: 20px 24px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead>
-              <tr style="background-color: #f1f5f9; color: #334155; text-align: left;">
-                <th style="padding: 8px 10px;">Folio</th>
-                <th style="padding: 8px 10px;">Estructura</th>
-                <th style="padding: 8px 10px;">Área</th>
-                <th style="padding: 8px 10px;">Técnico</th>
-                <th style="padding: 8px 10px; text-align: center;">Prioridad</th>
-                <th style="padding: 8px 10px; text-align: center;">Horas</th>
-                <th style="padding: 8px 10px;">Fecha Compromiso</th>
-                <th style="padding: 8px 10px; text-align: center;">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    return this.generateDailyEmailHtml('ALL');
   }
 }
 
@@ -2184,7 +2242,7 @@ class OutlookSyncManager {
     const updatedOrders = MoonshineStore.getOrders();
     const scheduled = updatedOrders.find(o => o.id === newFolio) || newOrder;
 
-    showToast(`✅ Pedido ${newFolio} aprobado con prioridad ${prioridad}. Compromiso: ${scheduled.fechaCompromisoEntrega || 'En cola'}.`, 'success');
+    showToast(`✅ Pedido ${newFolio} aprobado con prioridad ${prioridad}. Entrega: ${scheduled.fechaCompromisoTexto || scheduled.fechaCompromisoEntrega || 'En cola'}.`, 'success');
 
     // Mostrar modal con correo formal listo para copiar a Outlook
     this.showApprovalConfirmationModal(scheduled);
@@ -2192,6 +2250,7 @@ class OutlookSyncManager {
     this.renderInbox();
     this.updateNotificationBanner();
     if (typeof renderWeeklyGrid === 'function') renderWeeklyGrid();
+    if (typeof renderDeliveryStatusPlan === 'function') renderDeliveryStatusPlan();
     if (typeof updateKPIs === 'function') updateKPIs();
     if (typeof renderOrdersTable === 'function') renderOrdersTable();
     if (typeof renderTallerFloor === 'function') renderTallerFloor();
@@ -2208,27 +2267,26 @@ class OutlookSyncManager {
       document.body.appendChild(modal);
     }
 
+    const deliveryDateStr = EmailReportGenerator.formatDeliveryDateWithBuffer(order);
+
     const emailBody = `Hola ${order.solicitante},
 
-Tu solicitud de estructura Moonshine ha sido aprobada por Supervisión y ya se encuentra programada en el Plan Maestro de Ensamble:
+Tu solicitud de estructura Moonshine ha sido aprobada y ya se encuentra programada en nuestro Plan de Entregas:
 
 📌 Folio Oficial: ${order.id}
-🏗️ Estructura: ${order.estructuraNombre} (${order.cantidad} pieza${order.cantidad > 1 ? 's' : ''})
+👤 Pedido de: ${order.solicitante} (${order.area})
+🏗️ Estructura Solicitada: ${order.estructuraNombre} (${order.cantidad} pieza${order.cantidad > 1 ? 's' : ''})
 🔧 Tipo de Trabajo: ${order.tipoTrabajo || 'Estructura Nueva'}
-📍 Área Destino: ${order.area}
 🚨 Prioridad Asignada: ${order.prioridad}
-👤 Técnico de Ensamble Asignado: ${order.tecnicoAsignadoNombre || 'Equipo Moonshine'}
 
-PROGRAMACIÓN DE TALLER:
-📅 Programado para: Semana ${order.semanaProgramada || 1}, ${order.diaEntrega || 'Semanal'} (${order.turnoEntrega || 'T1'})
-⏱️ Fecha Estimada de Término de Ensamble: ${order.fechaFinFabricacion || 'Próximamente'}
-🚚 FECHA COMPROMISO DE ENTREGA (+3 Días de Holgura de Calidad): ${order.fechaCompromisoEntrega || 'Ver plan'}
+📅 FECHA COMPROMISO DE ENTREGA:
+🚚 Se entregará el día: ${deliveryDateStr} (Incluye +3 días de holgura)
 
-Puedes consultar el estatus en vivo de tu estructura en cualquier momento en nuestro portal oficial:
-https://gemaromoflex.github.io/moonshineplanner/
+Puedes consultar en vivo el estatus de tu pedido y el plan de entregas en nuestro portal:
+https://gemaromoflex.github.io/moonshineplanner/?vista=entregas
 
 Atentamente,
-Supervisión Lean Moonshine Axiom`;
+Equipo Moonshine Axiom`;
 
     modal.innerHTML = `
       <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-scale-in">
@@ -2680,6 +2738,7 @@ class SupabaseCloudSync {
       if (anyChanged) {
         SchedulingEngine.runAutoSchedule();
         if (typeof renderOrdersTable === 'function') renderOrdersTable();
+        if (typeof renderDeliveryStatusPlan === 'function') renderDeliveryStatusPlan();
         if (typeof renderWeeklyGrid === 'function') renderWeeklyGrid();
         if (typeof renderTallerFloor === 'function') renderTallerFloor();
         if (typeof renderTechniciansEfficiency === 'function') renderTechniciansEfficiency();
@@ -2688,6 +2747,7 @@ class SupabaseCloudSync {
         if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
         if (typeof renderStructureSelect === 'function') renderStructureSelect();
         if (typeof updateKPIs === 'function') updateKPIs();
+        if (typeof updateEmailPreview === 'function') updateEmailPreview();
         OutlookSyncManager.renderInbox();
         OutlookSyncManager.updateNotificationBanner();
       }

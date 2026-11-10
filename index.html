@@ -83,6 +83,26 @@
         </div>
 
       </div>
+
+      <!-- OPCIÓN 3: CONSULTAR PLAN DE ENTREGAS Y ESTATUS DE PEDIDOS (VISTA COMPARTIBLE) -->
+      <button type="button" onclick="enterAsDeliveryViewer()" class="w-full group text-left bg-slate-800/60 hover:bg-indigo-950/60 border border-slate-700 hover:border-indigo-500 rounded-2xl p-4 transition flex items-center justify-between gap-4">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-11 h-11 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center text-xl shrink-0">
+            📦
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-sm font-black text-white group-hover:text-indigo-300 transition">Plan de Entregas y Estatus de Pedidos</h3>
+              <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Vista Pública / Solicitantes</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Consulta todos los pedidos pendientes por solicitante y su fecha compromiso de entrega (+3 días de holgura).</p>
+          </div>
+        </div>
+        <div class="text-xs font-bold text-indigo-400 flex items-center space-x-1 shrink-0">
+          <span class="hidden sm:inline">Ver Entregas</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </div>
+      </button>
     </div>
   </div>
 
@@ -124,6 +144,13 @@
               <span class="truncate">Bandeja de Entrada</span>
             </div>
             <span id="badgeInboxCount" class="hidden bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 font-black rounded-full">0</span>
+          </button>
+          <button onclick="switchTab('tab-entregas')" id="nav-entregas" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
+            <div class="flex items-center space-x-2.5 truncate">
+              <i data-lucide="truck" class="w-4 h-4 shrink-0"></i>
+              <span class="truncate">Plan de Entregas</span>
+            </div>
+            <span id="badgeEntregasCount" class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 font-black rounded-full">0</span>
           </button>
           <button onclick="switchTab('tab-pedidos')" id="nav-pedidos" class="tab-btn w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-white hover:bg-slate-800/80 transition">
             <i data-lucide="list-ordered" class="w-4 h-4 shrink-0"></i>
@@ -613,6 +640,105 @@
     </section>
 
     <!-- ======================================================== -->
+    <!-- PESTAÑA: PLAN DE ENTREGAS Y ESTATUS DE PEDIDOS (COMPARTIR)-->
+    <!-- ======================================================== -->
+    <section id="tab-entregas" class="tab-content hidden space-y-5">
+
+      <!-- Encabezado Ejecutivo para Compartir Estatus -->
+      <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-2xl p-5 shadow-md border border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Estatus de Entregas en Tiempo Real (+3 Días de Holgura Incluidos)</span>
+          </div>
+          <h2 class="text-xl font-black tracking-tight flex items-center space-x-2">
+            <span>📦 Plan de Entregas — Estatus de Pedidos Pendientes</span>
+          </h2>
+          <p class="text-xs text-slate-300">
+            Consulta el plan oficial de entregas por solicitante y área. Todas las fechas compromiso ya incluyen los <strong>3 días de holgura</strong> para liberación de calidad.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button onclick="copyDeliveryStatusLink()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5" title="Copiar enlace directo a esta vista para enviar por Teams o WhatsApp">
+            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            <span>Copiar Link de Estatus</span>
+          </button>
+          <button onclick="copyEmailHtmlToClipboard()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5" title="Copiar tabla con formato lista para pegar en un correo de Outlook">
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            <span>Copiar para Correo Outlook</span>
+          </button>
+          <button onclick="toggleCleanPresentationMode()" id="btnCleanPresentation" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5" title="Modo pantalla limpia para proyectar o tomar captura">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            <span>Modo Captura / Proyección</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs de Estatus de Pedidos Pendientes -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p class="text-[11px] text-slate-500 font-bold uppercase">Total Pedidos Pendientes</p>
+          <h3 id="delivKpiTotal" class="text-2xl font-black text-slate-900 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/30 shadow-xs">
+          <p class="text-[11px] text-amber-800 font-bold uppercase">🔨 En Fabricación</p>
+          <h3 id="delivKpiWip" class="text-2xl font-black text-amber-600 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-xs">
+          <p class="text-[11px] text-emerald-800 font-bold uppercase">✅ Listos para Entrega</p>
+          <h3 id="delivKpiReady" class="text-2xl font-black text-emerald-600 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/30 shadow-xs">
+          <p class="text-[11px] text-blue-800 font-bold uppercase">📋 Programados en Cola</p>
+          <h3 id="delivKpiScheduled" class="text-2xl font-black text-blue-600 mt-1">0</h3>
+        </div>
+      </div>
+
+      <!-- Buscador y Filtros del Plan de Entregas -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="calendar-check" class="w-5 h-5 text-indigo-600"></i>
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Programación de Entregas por Solicitante</h3>
+              <p class="text-[11px] text-slate-500">Busca por nombre de quien pidió la estructura, área o folio</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" id="delivSearchInput" oninput="renderDeliveryStatusPlan()" placeholder="🔍 Buscar solicitante, área, estructura, folio..." class="px-3 py-2 text-xs border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64">
+            <select id="delivStatusFilter" onchange="renderDeliveryStatusPlan()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="ALL">📋 Todos los Pedidos Pendientes</option>
+              <option value="Listo para Entrega">✅ Listos para Entrega</option>
+              <option value="En Fabricación">🔨 En Fabricación</option>
+              <option value="Programado">⏳ Programados en Cola</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tabla Ejecutiva de Entregas (Sin datos internos de técnicos) -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-900 text-white uppercase font-bold tracking-wider text-[11px]">
+                <th class="py-3 px-3 rounded-tl-xl">Folio</th>
+                <th class="py-3 px-3">Pedido de (Solicitante y Área)</th>
+                <th class="py-3 px-3">Estructura Solicitada</th>
+                <th class="py-3 px-3 text-center">Prioridad</th>
+                <th class="py-3 px-3 text-center">Estatus y Avance</th>
+                <th class="py-3 px-3 rounded-tr-xl">Fecha de Entrega (+3 Días Holgura)</th>
+              </tr>
+            </thead>
+            <tbody id="delivOrdersTableBody" class="divide-y divide-slate-200">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
     <!-- PESTAÑA 4: HISTORIAL DE PEDIDOS                          -->
     <!-- ======================================================== -->
     <section id="tab-pedidos" class="tab-content hidden space-y-4">
@@ -748,20 +874,19 @@
       
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
         <div class="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
-            <i data-lucide="mail" class="w-5 h-5 text-blue-600"></i>
-            <span>Correo Diario del Plan (Outlook)</span>
-          </h2>
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+              <i data-lucide="mail" class="w-5 h-5 text-blue-600"></i>
+              <span>Correo de Plan de Entregas — Pedidos Pendientes (Outlook)</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Muestra todos los pedidos pendientes con nombre del solicitante y fecha de entrega (+3 días de holgura), sin mostrar técnicos ni turnos internos.</p>
+          </div>
 
-          <div class="flex items-center space-x-2">
+          <div class="flex flex-wrap items-center gap-2">
             <select id="emailDaySelector" onchange="updateEmailPreview()" class="text-xs font-bold p-2 border border-slate-300 rounded-lg bg-white outline-none">
-              <option value="Lunes">Lunes</option>
-              <option value="Martes">Martes</option>
-              <option value="Miércoles">Miércoles</option>
-              <option value="Jueves">Jueves</option>
-              <option value="Viernes">Viernes</option>
-              <option value="Sábado">Sábado</option>
-              <option value="Domingo">Domingo</option>
+              <option value="ALL">📋 Todos los Pedidos Pendientes</option>
+              <option value="URGENT">🚨 Solo Urgentes / Prioridad Alta</option>
+              <option value="WIP">🔨 En Fabricación y Listos para Entrega</option>
             </select>
             <button onclick="copyEmailHtmlToClipboard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
@@ -1321,6 +1446,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       }
 
       // Inicializar Vistas
+      SchedulingEngine.runAutoSchedule();
       updateLiveShiftHeader();
       renderStructureSelect();
       renderCatalogGrid();
@@ -1329,6 +1455,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       renderFloorTechSelector();
       renderTallerFloor();
       renderOrdersTable();
+      renderDeliveryStatusPlan();
       renderRosterMatrix();
       renderTechniciansManagement();
       renderRosterCalendar();
@@ -1343,6 +1470,12 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       const todayIso = new Date().toISOString().split('T')[0];
       const dateInput = document.getElementById('inputFechaRequerida');
       if (dateInput) dateInput.value = todayIso;
+
+      // Si se abre con ?vista=entregas en la URL, entrar directo al Plan de Entregas (modo público)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('vista') === 'entregas') {
+        enterAsDeliveryViewer();
+      }
     });
 
     function openModal(modalId) {
@@ -1360,9 +1493,13 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
         title: 'Bandeja de Aprobación (Supervisión)',
         subtitle: 'Filtra correos de Outlook, asigna prioridad y autoriza su ingreso al Plan Maestro'
       },
+      'tab-entregas': {
+        title: 'Plan de Entregas y Estatus de Pedidos',
+        subtitle: 'Fechas compromiso de entrega por solicitante (+3 días de holgura incluidos)'
+      },
       'tab-planificador': {
-        title: 'Plan Maestro Semanal 24/7',
-        subtitle: 'Secuenciación automática por prioridad, holgura (+3 días) y eficiencia por técnico'
+        title: 'Plan Maestro Semanal 24/7 (Interno Taller)',
+        subtitle: 'Secuenciación automática por prioridad, turnos y eficiencia por técnico'
       },
       'tab-taller': {
         title: 'Terminal Única de Técnico (Piso de Taller)',
@@ -1381,8 +1518,8 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
         subtitle: 'Estructuras estándar, tiempos de ensamble y referencias 3D (.skp)'
       },
       'tab-config': {
-        title: 'Reportes de Correo & Sincronización CSV',
-        subtitle: 'Generador de reporte diario para Outlook e integración con SharePoint'
+        title: 'Correo del Plan de Pedidos & Sincronización CSV',
+        subtitle: 'Generador de correo de pedidos pendientes con fechas de entrega (+3 días de holgura)'
       }
     };
 
@@ -1477,6 +1614,57 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       showToast('Bienvenido a tu plan de trabajo del día.', 'info');
     }
 
+    function enterAsDeliveryViewer() {
+      currentAppRole = 'consulta';
+      const overlay = document.getElementById('roleGatewayOverlay');
+      if (overlay) overlay.classList.add('hidden');
+
+      const sidebar = document.getElementById('appSidebar');
+      if (sidebar) sidebar.classList.add('hidden');
+
+      const btnUpdate = document.getElementById('btnTopUpdatePlan');
+      const btnNewOrder = document.getElementById('btnTopNewOrder');
+      if (btnUpdate) btnUpdate.classList.add('hidden');
+      if (btnNewOrder) btnNewOrder.classList.add('hidden');
+
+      const roleBadge = document.getElementById('topBarRoleBadge');
+      if (roleBadge) {
+        roleBadge.textContent = '📦 Consulta de Entregas';
+        roleBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200';
+      }
+
+      switchTab('tab-entregas');
+      showToast('Mostrando el Plan de Entregas y Estatus de Pedidos.', 'info');
+    }
+
+    function toggleCleanPresentationMode() {
+      const sidebar = document.getElementById('appSidebar');
+      const btn = document.getElementById('btnCleanPresentation');
+      if (!sidebar) return;
+
+      const isHidden = sidebar.classList.contains('hidden');
+      if (isHidden && currentAppRole === 'supervisor') {
+        sidebar.classList.remove('hidden');
+        if (btn) btn.innerHTML = '<i data-lucide="maximize-2" class="w-3.5 h-3.5"></i><span>Modo Captura / Proyección</span>';
+      } else {
+        sidebar.classList.add('hidden');
+        if (btn) btn.innerHTML = '<i data-lucide="minimize-2" class="w-3.5 h-3.5"></i><span>Mostrar Menú Lateral</span>';
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function copyDeliveryStatusLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const shareUrl = `${baseUrl}?vista=entregas`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('🔗 Link directo al Plan de Entregas copiado. ¡Listo para compartir!', 'success');
+        });
+      } else {
+        prompt('Copia este enlace para compartir el estatus de entregas:', shareUrl);
+      }
+    }
+
     function openChangePasswordModal() {
       const form = document.getElementById('changeSupervisorPassForm');
       if (form) form.reset();
@@ -1511,6 +1699,8 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
     function switchTab(tabId) {
       if (currentAppRole === 'tecnico' && tabId !== 'tab-taller') {
         tabId = 'tab-taller';
+      } else if (currentAppRole === 'consulta' && tabId !== 'tab-entregas') {
+        tabId = 'tab-entregas';
       }
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       const activeEl = document.getElementById(tabId);
@@ -1543,6 +1733,8 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
         renderWeeklyGrid();
         renderTechniciansEfficiency();
         updateKPIs();
+      } else if (tabId === 'tab-entregas') {
+        renderDeliveryStatusPlan();
       } else if (tabId === 'tab-taller') {
         renderFloorTechSelector();
         renderTallerFloor();
@@ -2361,10 +2553,153 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       lucide.createIcons();
     }
 
+    // Sección Compartible: Plan de Entregas y Estatus de Pedidos Pendientes
+    function renderDeliveryStatusPlan() {
+      const orders = MoonshineStore.getOrders();
+      const tbody = document.getElementById('delivOrdersTableBody');
+      if (!tbody) return;
+
+      const allPending = orders.filter(o =>
+        o.estado !== 'Entregado' &&
+        o.estado !== 'Cancelado' &&
+        o.estado !== 'Por Aprobar' &&
+        o.estado !== 'Pendiente de Aprobación'
+      );
+
+      // Actualizar KPIs de la sección y badge en barra lateral
+      const elBadge = document.getElementById('badgeEntregasCount');
+      if (elBadge) elBadge.textContent = allPending.length;
+
+      const elTotal = document.getElementById('delivKpiTotal');
+      const elWip = document.getElementById('delivKpiWip');
+      const elReady = document.getElementById('delivKpiReady');
+      const elSched = document.getElementById('delivKpiScheduled');
+
+      if (elTotal) elTotal.textContent = allPending.length;
+      if (elWip) elWip.textContent = allPending.filter(o => o.estado === 'En Fabricación').length;
+      if (elReady) elReady.textContent = allPending.filter(o => o.estado === 'Listo para Entrega').length;
+      if (elSched) elSched.textContent = allPending.filter(o => o.estado === 'Programado' || o.estado === 'Pendiente').length;
+
+      // Aplicar búsqueda y filtro
+      const searchInput = document.getElementById('delivSearchInput');
+      const statusFilter = document.getElementById('delivStatusFilter');
+      const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
+      const statusVal = statusFilter ? statusFilter.value : 'ALL';
+
+      let filtered = allPending.filter(o => {
+        if (statusVal !== 'ALL') {
+          if (statusVal === 'Programado' && o.estado !== 'Programado' && o.estado !== 'Pendiente') return false;
+          if (statusVal !== 'Programado' && o.estado !== statusVal) return false;
+        }
+        if (term) {
+          const haystack = `${o.id} ${o.solicitante} ${o.area} ${o.estructuraNombre} ${o.tipoTrabajo || ''}`.toLowerCase();
+          if (!haystack.includes(term)) return false;
+        }
+        return true;
+      });
+
+      const statusOrder = { 'Listo para Entrega': 1, 'En Fabricación': 2, 'Programado': 3, 'Pendiente': 4 };
+      const priorityWeights = { 'Crítica': 4, 'Alta': 3, 'Normal': 2, 'Baja': 1 };
+
+      filtered.sort((a, b) => {
+        const sDiff = (statusOrder[a.estado] || 9) - (statusOrder[b.estado] || 9);
+        if (sDiff !== 0) return sDiff;
+        const dateA = a.fechaCompromisoEntrega && a.fechaCompromisoEntrega !== 'Por definir' ? a.fechaCompromisoEntrega : '2099-12-31';
+        const dateB = b.fechaCompromisoEntrega && b.fechaCompromisoEntrega !== 'Por definir' ? b.fechaCompromisoEntrega : '2099-12-31';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (priorityWeights[b.prioridad] || 0) - (priorityWeights[a.prioridad] || 0);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="py-10 px-4 text-center text-slate-400 italic">
+              No se encontraron pedidos pendientes con los filtros seleccionados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(o => {
+        let pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800">🔷 Media</span>';
+        if (o.prioridad === 'Crítica') {
+          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">🚨 Urgente</span>';
+        } else if (o.prioridad === 'Alta') {
+          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">⚡ Alta</span>';
+        } else if (o.prioridad === 'Baja') {
+          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">⚪ Baja</span>';
+        }
+
+        const totalHrs = o.horasEstimadas || 4;
+        const doneHrs = o.progresoHoras || 0;
+        const pct = o.estado === 'Listo para Entrega' ? 100 : (o.estado === 'En Fabricación' ? Math.max(15, Math.min(95, Math.round((doneHrs / totalHrs) * 100))) : 0);
+
+        let statusHtml = '';
+        if (o.estado === 'Listo para Entrega') {
+          statusHtml = `
+            <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <span>✅ Listo para Entrega</span>
+            </span>
+          `;
+        } else if (o.estado === 'En Fabricación') {
+          statusHtml = `
+            <div class="inline-flex flex-col items-center w-36">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 mb-1">
+                🔨 En Fabricación (${pct}%)
+              </span>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-amber-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        } else {
+          statusHtml = `
+            <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              <span>📋 Programado en Plan</span>
+            </span>
+          `;
+        }
+
+        const deliveryDateFormatted = EmailReportGenerator.formatDeliveryDateWithBuffer(o);
+
+        return `
+          <tr class="hover:bg-slate-50/90 transition">
+            <td class="py-3.5 px-3 font-mono font-bold text-slate-900 text-xs">${o.id}</td>
+            <td class="py-3.5 px-3">
+              <div class="font-bold text-slate-900 text-xs flex items-center space-x-1.5">
+                <span class="text-indigo-600">👤</span>
+                <span>Pedido de: <strong>${o.solicitante}</strong></span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">📍 Área: <strong class="text-slate-700">${o.area}</strong></div>
+            </td>
+            <td class="py-3.5 px-3">
+              <div class="font-bold text-slate-900 text-xs">${o.estructuraNombre}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                Cantidad: <strong>${o.cantidad} pza(s)</strong> &bull; ${o.tipoTrabajo || 'Estructura Nueva'}
+              </div>
+            </td>
+            <td class="py-3.5 px-3 text-center">${pBadge}</td>
+            <td class="py-3.5 px-3 text-center">${statusHtml}</td>
+            <td class="py-3.5 px-3 bg-emerald-50/50 border-l-2 border-emerald-500">
+              <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-700">Se entrega el día:</div>
+              <div class="font-black text-emerald-950 text-xs mt-0.5">📅 ${deliveryDateFormatted}</div>
+              <div class="text-[10px] text-emerald-600 font-semibold">+3 días de holgura incluidos</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
     // Tabla General de Pedidos
     function renderOrdersTable() {
       const orders = MoonshineStore.getOrders();
       const tbody = document.getElementById('ordersTableBody');
+      if (typeof renderDeliveryStatusPlan === 'function') {
+        renderDeliveryStatusPlan();
+      }
       if (!tbody) return;
 
       tbody.innerHTML = orders.map(o => {
@@ -2378,10 +2713,12 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
         else if (o.estado === 'Listo para Entrega') sColor = 'bg-emerald-100 text-emerald-800 font-bold';
         else if (o.estado === 'Entregado') sColor = 'bg-slate-200 text-slate-800';
 
+        const deliveryWithBuffer = EmailReportGenerator.formatDeliveryDateWithBuffer(o);
+
         return `
           <tr class="hover:bg-slate-50 transition">
             <td class="py-3 px-3 font-mono font-bold text-slate-900">${o.id}</td>
-            <td class="py-3 px-3">${o.solicitante}</td>
+            <td class="py-3 px-3 font-semibold text-slate-900">${o.solicitante}</td>
             <td class="py-3 px-3 font-medium">${o.area}</td>
             <td class="py-3 px-3 font-semibold text-slate-800">${o.estructuraNombre}</td>
             <td class="py-3 px-3 text-center">${o.cantidad}</td>
@@ -2392,7 +2729,10 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
             <td class="py-3 px-3 text-center">
               <span class="px-2 py-0.5 rounded-full text-[10px] ${sColor}">${o.estado}</span>
             </td>
-            <td class="py-3 px-3 text-slate-600 font-medium">${o.fechaEntregaEstimada || 'Por secuenciar'}</td>
+            <td class="py-3 px-3 text-emerald-800 font-bold">
+              📅 ${deliveryWithBuffer}
+              <span class="block text-[10px] text-emerald-600 font-normal">+3 días holgura</span>
+            </td>
             <td class="py-3 px-3 text-center">
               <button onclick="openOrderDetailsModal('${o.id}')" class="text-blue-600 hover:text-blue-800 p-1" title="Ver Detalles">
                 <i data-lucide="eye" class="w-4 h-4"></i>
@@ -2940,32 +3280,63 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
     // Vista previa de correo
     function updateEmailPreview() {
       const daySelector = document.getElementById('emailDaySelector');
-      const targetDay = daySelector ? daySelector.value : null;
+      const filterMode = daySelector ? daySelector.value : 'ALL';
       const container = document.getElementById('emailPreviewContainer');
       if (!container) return;
 
-      container.innerHTML = EmailReportGenerator.generateDailyEmailHtml(targetDay);
+      container.innerHTML = EmailReportGenerator.generateDailyEmailHtml(filterMode);
     }
 
     function copyEmailHtmlToClipboard() {
       const daySelector = document.getElementById('emailDaySelector');
-      const targetDay = daySelector ? daySelector.value : null;
-      const html = EmailReportGenerator.generateDailyEmailHtml(targetDay);
+      const filterMode = daySelector ? daySelector.value : 'ALL';
+      const html = EmailReportGenerator.generateDailyEmailHtml(filterMode);
 
-      navigator.clipboard.writeText(html).then(() => {
-        showToast('Formato HTML copiado. Puedes pegarlo en Outlook (Ctrl + V).', 'success');
-      }).catch(err => {
-        console.error('Error al copiar al portapapeles:', err);
-        showToast('No se pudo copiar automáticamente. Intenta seleccionarlo manualmente.', 'error');
-      });
+      if (navigator.clipboard && window.ClipboardItem) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const plainText = tempDiv.innerText || tempDiv.textContent || '';
+        const item = new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plainText], { type: 'text/plain' })
+        });
+        navigator.clipboard.write([item]).then(() => {
+          showToast('📧 Plan de Entregas copiado con diseño. Pégalo directo en tu correo de Outlook (Ctrl + V).', 'success');
+        }).catch(() => {
+          fallbackCopyRichHtml(html);
+        });
+      } else {
+        fallbackCopyRichHtml(html);
+      }
+    }
+
+    function fallbackCopyRichHtml(html) {
+      const tempEl = document.createElement('div');
+      tempEl.innerHTML = html;
+      tempEl.style.position = 'fixed';
+      tempEl.style.left = '-9999px';
+      document.body.appendChild(tempEl);
+      const range = document.createRange();
+      range.selectNodeContents(tempEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      try {
+        document.execCommand('copy');
+        showToast('📧 Plan de Entregas copiado con formato para Outlook (Ctrl + V).', 'success');
+      } catch (err) {
+        navigator.clipboard.writeText(html);
+        showToast('Formato copiado al portapapeles.', 'info');
+      }
+      sel.removeAllRanges();
+      document.body.removeChild(tempEl);
     }
 
     function openMailtoClient() {
-      const daySelector = document.getElementById('emailDaySelector');
-      const targetDay = daySelector ? daySelector.value : 'Hoy';
       const settings = MoonshineStore.getSettings();
-      const subject = encodeURIComponent(`[Moonshine Shop] Plan Diario de Producción — ${targetDay}`);
-      const body = encodeURIComponent(`Estimado equipo:\n\nSe adjunta el plan de producción de Moonshine para el día ${targetDay}.\nFavor de verificar las estructuras programadas por turno en el portal de Moonshine Flow.\n\nAtentamente,\nTaller de Innovación Moonshine`);
+      const todayStr = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+      const subject = encodeURIComponent(`[Moonshine] Plan de Entregas y Estatus de Pedidos Pendientes — ${todayStr}`);
+      const body = encodeURIComponent(`Estimado equipo:\n\nA continuación se comparte el plan de entregas y estatus actual de los pedidos pendientes en Moonshine (las fechas compromiso ya incluyen los +3 días de holgura de calidad).\n\n(Presiona Ctrl + V aquí después de hacer clic en "Copiar Correo" en el portal, o consulta el estatus en vivo en: https://gemaromoflex.github.io/moonshineplanner/?vista=entregas )\n\nAtentamente,\nEquipo Moonshine`);
 
       window.location.href = `mailto:${settings.notificationEmail}?subject=${subject}&body=${body}`;
     }
