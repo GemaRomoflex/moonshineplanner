@@ -1,0 +1,44 @@
+{
+  "name": "Moonshine Flow Executive Theme",
+  "dataColors": [
+    "#2563EB",
+    "#10B981",
+    "#F59E0B",
+    "#DC2626",
+    "#7C3AED",
+    "#0F172A",
+    "#06B6D4",
+    "#64748B"
+  ],
+  "background": "#F8FAFC",
+  "foreground": "#0F172A",
+  "tableAccent": "#2563EB",
+  "good": "#10B981",
+  "neutral": "#F59E0B",
+  "bad": "#DC2626",
+  "maximum": "#1E3A8A",
+  "center": "#3B82F6",
+  "minimum": "#DBEAFE",
+  "textClasses": {
+    "callout": {
+      "fontSize": 26,
+      "fontFace": "Segoe UI Bold",
+      "color": "#0F172A"
+    },
+    "title": {
+      "fontSize": 13,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1E293B"
+    },
+    "header": {
+      "fontSize": 11,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0F172A"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#475569"
+    }
+  }
+}

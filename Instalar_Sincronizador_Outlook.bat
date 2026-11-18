@@ -13,6 +13,10 @@ set "B64_FILE=%INSTALL_DIR%\service.b64"
 
 echo [1/3] Instalando motor de lectura de Outlook en carpeta local...
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+if exist "%~dp0server.ps1" (
+    copy /y "%~dp0server.ps1" "%PS_SCRIPT%" >nul
+    goto skip_b64
+)
 if exist "%B64_FILE%" del /q "%B64_FILE%"
 echo IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09>> "%B64_FILE%"
 echo PT09PT09PT09PT09PQojIFNlcnZpZG9yIExvY2FsIFdlYiBwYXJhIE1vb25zaGluZSBGbG93IE1h>> "%B64_FILE%"
@@ -305,6 +309,7 @@ echo CiAgICAkbGlzdGVuZXIuU3RvcCgpCiAgICBXcml0ZS1Ib3N0ICJTZXJ2aWRvciBkZXRlbmlkby4
 echo IC1Gb3JlZ3JvdW5kQ29sb3IgWWVsbG93Cn0K>> "%B64_FILE%"
 certutil -f -decode "%B64_FILE%" "%PS_SCRIPT%" >nul 2>&1
 del /q "%B64_FILE%" >nul 2>&1
+:skip_b64
 echo       OK - Motor instalado en %PS_SCRIPT%
 echo.
 echo [2/3] Configurando arranque automatico invisible al encender la PC...

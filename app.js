@@ -1731,14 +1731,312 @@ class SharePointBridge {
 }
 
 // ==========================================
+// 4.5 CLASIFICADOR INTELIGENTE DE CORREOS CON IA & MOTOR LOCAL (FUZZY NLP)
+// ==========================================
+class AIEmailClassifier {
+  static STORAGE_KEY = 'msh_ai_settings_v1';
+
+  static getSettings() {
+    const defaults = {
+      provider: 'local', // 'gemini' | 'groq' | 'openai' | 'local'
+      apiKey: '',
+      model: 'gemini-1.5-flash',
+      autoRespond: false,
+      portalUrl: window.location.origin + window.location.pathname
+    };
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY);
+      if (saved) return { ...defaults, ...JSON.parse(saved) };
+    } catch (e) {}
+    return defaults;
+  }
+
+  static saveSettings(settings) {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(settings));
+    } catch (e) {}
+  }
+
+  /**
+   * Clasifica un correo usando IA si hay API configurada, o motor heurístico local tolerante a faltas de ortografía.
+   */
+  static async classify(rawEmail) {
+    const settings = this.getSettings();
+    if (settings.apiKey && settings.apiKey.trim() !== '' && settings.provider !== 'local') {
+      try {
+        const result = await this.classifyWithLLM(rawEmail, settings);
+        if (result && result.categoria) return result;
+      } catch (err) {
+        console.warn('API de IA no disponible, ejecutando clasificador heurístico local:', err);
+      }
+    }
+    return this.classifyLocal(rawEmail);
+  }
+
+  static async classifyWithLLM(rawEmail, settings) {
+    const subject = rawEmail.subject || '';
+    const body = rawEmail.body || rawEmail.preview || '';
+    const sender = rawEmail.sender || 'Solicitante';
+    const textToAnalyze = `De: ${sender}\nAsunto: ${subject}\nMensaje:\n${body}`.slice(0, 2500);
+
+    const systemPrompt = `Eres el asistente de operaciones de Moonshine Flow Manager (taller de estructuras lean, mesas de ensamble, carros kitting y racks FIFO).
+Tu tarea es clasificar este correo recibido en UNA de estas 4 categorías:
+1. "NUEVO_PEDIDO": Solicitud para fabricar una estructura nueva, mesa, carro, rack, o retrabajo/modificación con datos de planta.
+2. "ESTATUS_TICKET": Pregunta sobre el estado, avance, seguimiento o fecha de entrega de un ticket o pedido existente (ej. MSH-2026-003).
+3. "SIN_TICKET": Petición informal o vaga de alguien que pide una estructura sin haber llenado la solicitud formal en el portal ni tener folio.
+4. "IRRELEVANTE": Correo de spam, masivo o no relacionado a Moonshine.
+
+IMPORTANTE: Tolera faltas de ortografía, errores de tipeo (ej. "extructura", "carito", "urjente", "estasion", "tiket", "ensanble") y lenguaje coloquial.
+
+Debes responder ÚNICAMENTE con un JSON válido con esta estructura exacta:
+{
+  "categoria": "NUEVO_PEDIDO" | "ESTATUS_TICKET" | "SIN_TICKET" | "IRRELEVANTE",
+  "folio": "MSH-2026-XXX o null",
+  "solicitante": "Nombre o remitente",
+  "area": "Línea SMT 01 | Línea SMT 02 | Backend / Ensamble | Calidad | Almacén",
+  "estructura": "Estructura sugerida o null",
+  "cantidad": 1,
+  "prioridad": "Crítica" | "Alta" | "Normal" | "Baja",
+  "resumen": "Resumen en 1 oración",
+  "intencion": "Explicación breve de lo que necesita"
+}`;
+
+    if (settings.provider === 'gemini') {
+      const model = settings.model || 'gemini-1.5-flash';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
+      const payload = {
+        contents: [{
+          parts: [{ text: `${systemPrompt}\n\nCORREO:\n${textToAnalyze}` }]
+        }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) throw new Error(`Gemini HTTP ${resp.status}`);
+      const data = await resp.json();
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawJson) {
+        return JSON.parse(rawJson);
+      }
+    } else if (settings.provider === 'groq' || settings.provider === 'openai') {
+      const endpoint = settings.provider === 'groq' 
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://api.openai.com/v1/chat/completions';
+      const model = settings.model || (settings.provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini');
+
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: textToAnalyze }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1
+        })
+      });
+      if (!resp.ok) throw new Error(`${settings.provider} HTTP ${resp.status}`);
+      const data = await resp.json();
+      const rawJson = data.choices?.[0]?.message?.content;
+      if (rawJson) {
+        return JSON.parse(rawJson);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Clasificador Heurístico Local con tolerancia a faltas de ortografía (typos, fonética y regex)
+   */
+  static classifyLocal(rawEmail) {
+    const subject = String(rawEmail.subject || '');
+    const body = String(rawEmail.body || rawEmail.preview || '');
+    const fullText = `${subject} ${body}`.toLowerCase();
+
+    // 1. Detección de Folio oficial (ej. MSH-2026-004 o MSH004)
+    let folio = null;
+    const folioMatch = fullText.match(/\b(msh[-\s]?\d{4}[-\s]?\d{3}|msh[-\s]?\d{1,4})\b/i);
+    if (folioMatch) {
+      folio = folioMatch[1].toUpperCase().replace(/\s+/g, '-');
+      if (!folio.startsWith('MSH-2026-') && /msh-\d{3}/i.test(folio)) {
+        folio = folio.replace(/msh-/i, 'MSH-2026-');
+      }
+    }
+
+    // 2. Detección de consultas de estatus (con typos: estatus, status, tiket, avance, cdo queda, etc.)
+    const isStatusQuery = folio !== null || 
+      /estatus|status|avance|c[oó]mo\s*va|cu[aá]ndo\s*queda|cu[aá]ndo\s*entregan|fecha\s*de\s*entrega|seguimiento|seguimiento\s*de\s*ticket|saber\s*si\s*ya\s*est[aá]|tiempo\s*de\s*entrega/i.test(fullText);
+
+    // 3. Detección de estructuras con tolerancia a typos comunes
+    let estructuraSugerida = 'Estación de Trabajo / Mesa de Ensamble';
+    if (/carr?o|carr?ito|kitting|tugger|charolas?|carro\s*tipo/i.test(fullText)) {
+      estructuraSugerida = 'Carro de Transporte ESD (Kitting)';
+    } else if (/ra[ck]|fifo|gravedad|din[aá]mico/i.test(fullText)) {
+      estructuraSugerida = 'Rack Dinámico FIFO por Gravedad (4 Niveles)';
+    } else if (/mesa|estaci[oó]n|estasi[oó]n|workstation|ensam?n?ble|ergon[oó]mica/i.test(fullText)) {
+      estructuraSugerida = 'Estación de Trabajo / Mesa de Ensamble Ergonómica';
+    } else if (/shadow|5s|tablero|herramientas/i.test(fullText)) {
+      estructuraSugerida = 'Shadow Board / Tablero de Herramientas 5S';
+    } else if (/poka|fixture|dispositivo/i.test(fullText)) {
+      estructuraSugerida = 'Dispositivo Poka-Yoke / Fixture Mecánico';
+    } else if (/inspecci[oó]n|calidad|metrolog[ií]a/i.test(fullText)) {
+      estructuraSugerida = 'Mesa de Inspección de Calidad con Iluminación';
+    }
+
+    // 4. Detección de Prioridad (con typos: urjente, linea parada, emergencia)
+    let prioridad = 'Normal';
+    if (/ur[gj]ente|l[ií]nea\s*parada|linea\s*parada|emergencia|cr[ií]tico|critica|paro|inmediat/i.test(fullText)) {
+      prioridad = 'Crítica';
+    } else if (/alta|kaizen|npi|asap|pronto|prioritari/i.test(fullText)) {
+      prioridad = 'Alta';
+    }
+
+    // 5. Detección de Área
+    let area = 'Línea SMT 01';
+    if (/smt\s*0?2/i.test(fullText)) area = 'Línea SMT 02';
+    else if (/smt\s*0?3/i.test(fullText)) area = 'Línea SMT 03';
+    else if (/backend|ensam?n?ble/i.test(fullText)) area = 'Ensamble Backend A';
+    else if (/calidad|qa|metrolog[ií]a/i.test(fullText)) area = 'Calidad & NPI';
+    else if (/almac[eé]n|kitting/i.test(fullText)) area = 'Almacén de Componentes';
+    else if (/pruebas|testing/i.test(fullText)) area = 'Área de Pruebas / Testing';
+
+    // 6. Detección de Cantidad
+    let cantidad = 1;
+    const qtyMatch = fullText.match(/(\d+)\s*(?:piezas?|pzas?|mesas?|carr?itos?|ra[ck]s?|estructuras?)/i);
+    if (qtyMatch) cantidad = parseInt(qtyMatch[1], 10) || 1;
+
+    // 7. Determinación de la Categoría
+    let categoria = 'NUEVO_PEDIDO';
+    if (isStatusQuery) {
+      categoria = 'ESTATUS_TICKET';
+    } else {
+      // Si pide informalmente sin especificaciones ni dimensiones:
+      const hasInformalPlea = /hazme|ocupa|ap[oó]yame|ayuda|urge|podr[ií]an|me\s*haces|quiero\s*pedir|a\s*ver\s*si\s*pueden/i.test(fullText);
+      const hasSpecs = /medidas?|dimension|croquis|plano|dibujo|solicitud|formulario|estándar|mm|cm|mts|pulgadas/i.test(fullText);
+      if (hasInformalPlea && !hasSpecs) {
+        categoria = 'SIN_TICKET';
+      } else {
+        const hasStructureKeywords = /estructura|extructura|mesa|carro|carr?ito|ra[ck]|estaci[oó]n|perfil|ensam?n?ble|kitting|solicitud|pedido|correo/i.test(fullText);
+        if (!hasStructureKeywords) {
+          categoria = 'IRRELEVANTE';
+        }
+      }
+    }
+
+    return {
+      categoria,
+      folio,
+      solicitante: rawEmail.sender || 'Solicitante de Planta',
+      area,
+      estructura: estructuraSugerida,
+      cantidad,
+      prioridad,
+      resumen: subject || 'Solicitud recibida',
+      intencion: categoria === 'ESTATUS_TICKET' 
+        ? `Consulta de estatus del ticket ${folio || 'en trámite'}` 
+        : (categoria === 'SIN_TICKET' ? 'Petición informal sin registro en app' : 'Requerimiento de estructura para fabricación')
+    };
+  }
+
+  /**
+   * Genera la respuesta formal para consultas de estatus
+   */
+  static generateStatusReply(email, order, portalUrl) {
+    const sender = email.sender || 'Compañero';
+    const fol = order ? order.id : (email.folioDetectado || 'MSH-TICKET');
+    const baseLink = portalUrl || (window.location.origin + window.location.pathname);
+    const trackingLink = `${baseLink}?vista=entregas&folio=${encodeURIComponent(fol)}`;
+
+    if (!order) {
+      return `Hola ${sender},
+
+Hemos recibido tu consulta sobre el estatus de tu solicitud Moonshine.
+
+⚠️ No encontramos un pedido registrado con el folio "${fol}".
+Por favor confirma si tu número de folio es correcto o ingresa a nuestro portal oficial para consultar todos los pedidos en curso:
+🔗 ${trackingLink}
+
+Saludos cordiales,
+Equipo Moonshine Flow Axiom`;
+    }
+
+    const deliveryDateStr = EmailReportGenerator.formatDeliveryDateWithBuffer(order);
+
+    return `Hola ${sender},
+
+Respecto a tu consulta sobre el ticket ${order.id}:
+
+📌 Estatus Actual: ${order.estado}
+🏗️ Estructura: ${order.estructuraNombre} (${order.cantidad} pieza${order.cantidad > 1 ? 's' : ''})
+👤 Solicitado para: ${order.area}
+📅 FECHA COMPROMISO DE ENTREGA:
+🚚 Se entregará el día: ${deliveryDateStr}
+🔧 Técnico Asignado: ${order.tecnicoAsignadoNombre || 'Técnico de Turno'}
+
+Puedes seguir en tiempo real el progreso de fabricación y las entregas en nuestro portal:
+🔗 ${trackingLink}
+
+Saludos cordiales,
+Equipo Moonshine Flow Axiom`;
+  }
+
+  /**
+   * Genera la respuesta formal para solicitudes informales sin ticket
+   */
+  static generateNoTicketReply(email, portalUrl) {
+    const sender = email.sender || 'Compañero';
+    const baseLink = portalUrl || (window.location.origin + window.location.pathname);
+    const orderLink = `${baseLink}?vista=solicitud`;
+
+    return `Hola ${sender},
+
+Hemos recibido tu correo sobre un requerimiento de estructura Moonshine.
+
+⚠️ INFORMACIÓN IMPORTANTE PARA TU SOLICITUD:
+Para que tu requerimiento pueda ser evaluado, priorizado y programado en el plan de producción del taller Moonshine, es indispensable registrarlo a través de nuestro portal oficial:
+
+🔗 Ingresa tu pedido aquí:
+${orderLink}
+
+Al registrarlo en el portal:
+1. El sistema le asignará automáticamente tu folio oficial (MSH-2026-XXX).
+2. Se programará en el turno correspondiente según su prioridad.
+3. Se te asignará una fecha de entrega oficial garantizada.
+
+Agradecemos tu apoyo para mantener el flujo ágil y ordenado de la planta.
+
+Saludos cordiales,
+Equipo Moonshine Flow Axiom`;
+  }
+}
+window.AIEmailClassifier = AIEmailClassifier;
+
+// ==========================================
 // 5. GESTOR DE ESCANEO DE OUTLOOK & AUTOMATIZACIÓN
 // ==========================================
 class OutlookSyncManager {
   static STORAGE_KEY = 'msh_outlook_sync_v1';
-  static DEFAULT_KEYWORDS = ['Moonshine', 'estructuras', 'mesas', 'carritos', 'racks', 'estaciones', 'perfil'];
+  static DEFAULT_KEYWORDS = [
+    'Moonshine', 'correo', 'correos', 'estructura', 'estructuras', 'extructura',
+    'mesa', 'mesas', 'carrito', 'carritos', 'carro', 'carros', 'rack', 'racks',
+    'estacion', 'estaciones', 'perfil', 'solicitud', 'pedido', 'ticket', 'msh'
+  ];
   static timerId = null;
   static countdownInterval = null;
   static secondsRemaining = 300;
+  static currentInboxTab = 'NUEVO_PEDIDO';
 
   static getState() {
     const defaultState = {
@@ -1875,42 +2173,39 @@ class OutlookSyncManager {
   static analyzeCloudEmail(rawEmail, kwList) {
     const subject = String(rawEmail.subject || rawEmail.Subject || 'Solicitud Moonshine');
     const body = String(rawEmail.body || rawEmail.Body || rawEmail.preview || '');
-    const fullLower = `${subject} ${body}`.toLowerCase();
+    const cleanBody = body.replace(/[\r\n\t]+/g, ' ').trim();
 
+    // Análisis inteligente local con tolerancia a faltas de ortografía
+    const classification = AIEmailClassifier.classifyLocal({ subject, body: cleanBody, sender: rawEmail.sender || rawEmail.From });
+
+    // Palabras clave coincidentes
+    const fullLower = `${subject} ${body}`.toLowerCase();
     const cleanKws = (kwList || this.DEFAULT_KEYWORDS).map(k => k.trim().toLowerCase()).filter(Boolean);
     const matched = cleanKws.filter(kw => fullLower.includes(kw));
 
-    if (matched.length === 0 && !rawEmail.forceInclude) return null;
+    if (matched.length === 0 && !rawEmail.forceInclude && classification.categoria === 'IRRELEVANTE') {
+      return null;
+    }
 
-    let sugerencia = rawEmail.sugerenciaEstructura || 'Estación de Trabajo';
-    if (/carro|carrito|kitting|tray/i.test(fullLower)) sugerencia = 'Carro con Charolas';
-    else if (/rack|fifo/i.test(fullLower)) sugerencia = 'Rack FIFO';
-    else if (/impresora/i.test(fullLower)) sugerencia = 'Carro Impresora';
-
-    let prioridad = rawEmail.prioridadSugerida || 'Normal';
-    if (/urgente|linea parada|línea parada|critico|crítico|paro/i.test(fullLower)) prioridad = 'Crítica';
-    else if (/alta|kaizen|npi|asap/i.test(fullLower)) prioridad = 'Alta';
-
-    let area = rawEmail.areaSugerida || 'Receiving';
-    if (/kitting/i.test(fullLower)) area = 'Kitting';
-    else if (/warehouse|almacen|almacén/i.test(fullLower)) area = 'Warehouse';
-    else if (/vlp/i.test(fullLower)) area = 'VLP';
-    else if (/smt/i.test(fullLower)) area = 'Línea SMT 01';
-
-    const cleanBody = body.replace(/[\r\n\t]+/g, ' ').trim();
     return {
       id: rawEmail.id || rawEmail.EntryID || ('CLOUD-' + btoa(unescape(encodeURIComponent(subject + (rawEmail.receivedTime || '')))).slice(0, 16)),
       subject,
-      sender: rawEmail.sender || rawEmail.From || 'Solicitante Outlook',
+      sender: rawEmail.sender || rawEmail.From || classification.solicitante || 'Solicitante Outlook',
       senderEmail: rawEmail.senderEmail || '',
       receivedTime: rawEmail.receivedTime || 'Reciente',
       preview: cleanBody.length > 240 ? cleanBody.slice(0, 240) + '...' : cleanBody,
-      body: cleanBody.slice(0, 1200),
-      importance: prioridad,
-      sugerenciaEstructura: sugerencia,
-      prioridadSugerida: prioridad,
-      areaSugerida: area,
-      palabrasDetectadas: matched.join(', ')
+      body: cleanBody.slice(0, 1500),
+      importance: rawEmail.prioridadSugerida || classification.prioridad || 'Normal',
+      sugerenciaEstructura: rawEmail.sugerenciaEstructura || classification.estructura,
+      selectedStructureId: null,
+      prioridadSugerida: rawEmail.prioridadSugerida || classification.prioridad || 'Normal',
+      selectedPriority: rawEmail.prioridadSugerida || classification.prioridad || 'Normal',
+      areaSugerida: rawEmail.areaSugerida || classification.area || 'Línea SMT 01',
+      cantidad: rawEmail.cantidad || classification.cantidad || 1,
+      categoria: rawEmail.categoriaDetectada || classification.categoria || 'NUEVO_PEDIDO',
+      folioDetectado: rawEmail.folioDetectado || classification.folio || null,
+      intencion: rawEmail.intencion || classification.intencion || 'Requerimiento recibido',
+      palabrasDetectadas: matched.join(', ') || 'Moonshine'
     };
   }
 
@@ -1941,12 +2236,15 @@ class OutlookSyncManager {
         const existingMap = new Map((updatedState.emails || []).map(e => [e.id, e]));
         let newFoundCount = 0;
 
-        data.emails.forEach(em => {
+        for (const em of data.emails) {
           if (!updatedState.dismissedIds.includes(em.id) && !existingMap.has(em.id)) {
-            existingMap.set(em.id, em);
-            newFoundCount++;
+            const enriched = this.analyzeCloudEmail(em, kwList);
+            if (enriched) {
+              existingMap.set(enriched.id, enriched);
+              newFoundCount++;
+            }
           }
-        });
+        }
 
         updatedState.emails = Array.from(existingMap.values());
         this.saveState(updatedState);
@@ -1975,12 +2273,57 @@ class OutlookSyncManager {
     }
   }
 
+  static setInboxTab(tabKey) {
+    this.currentInboxTab = tabKey;
+    const descEl = document.getElementById('inboxTabDescription');
+    if (descEl) {
+      if (tabKey === 'NUEVO_PEDIDO') descEl.textContent = '📥 Mostrando únicamente pedidos nuevos listos para autorizar e ingresar al Plan Maestro';
+      else if (tabKey === 'ESTATUS_TICKET') descEl.textContent = '🔍 Correos de personas preguntando por el estatus o avance de sus tickets';
+      else if (tabKey === 'SIN_TICKET') descEl.textContent = '⚠️ Solicitudes informales por correo que deben registrarse en el portal';
+      else descEl.textContent = 'Mostrando todas las solicitudes activas';
+    }
+
+    // Actualizar estilos de los botones de pestañas
+    const tabs = ['NUEVO_PEDIDO', 'ESTATUS_TICKET', 'SIN_TICKET', 'ALL'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`tabBtn-${t}`);
+      if (!btn) return;
+      if (t === tabKey) {
+        btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+          t === 'NUEVO_PEDIDO' ? 'bg-blue-600 text-white' : 
+          (t === 'ESTATUS_TICKET' ? 'bg-indigo-600 text-white' : 
+          (t === 'SIN_TICKET' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-white'))
+        }`;
+      } else {
+        btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200';
+      }
+    });
+
+    this.renderInbox();
+  }
+
   static renderInbox() {
     const state = this.getState();
     const container = document.getElementById('outlookEmailsContainer');
     const badge = document.getElementById('badgeInboxCount');
     const emptyState = document.getElementById('outlookEmptyState');
     const activeEmails = (state.emails || []).filter(e => !state.dismissedIds.includes(e.id));
+
+    // Separar por categorías
+    const newOrders = activeEmails.filter(e => (!e.categoria || e.categoria === 'NUEVO_PEDIDO'));
+    const statusQueries = activeEmails.filter(e => e.categoria === 'ESTATUS_TICKET');
+    const noTicketList = activeEmails.filter(e => e.categoria === 'SIN_TICKET');
+
+    // Sincronizar contadores en las pestañas del Inbox
+    const bNuevos = document.getElementById('badgeTabNuevos');
+    const bEstatus = document.getElementById('badgeTabEstatus');
+    const bSinTicket = document.getElementById('badgeTabSinTicket');
+    const bTodos = document.getElementById('badgeTabTodos');
+
+    if (bNuevos) bNuevos.textContent = newOrders.length;
+    if (bEstatus) bEstatus.textContent = statusQueries.length;
+    if (bSinTicket) bSinTicket.textContent = noTicketList.length;
+    if (bTodos) bTodos.textContent = activeEmails.length;
 
     // Sincronizar controles de interfaz
     const checkEl = document.getElementById('checkAutoScan');
@@ -2011,10 +2354,10 @@ class OutlookSyncManager {
       `;
     }
 
-    // Actualizar badge en la navegación
+    // Actualizar badge en la barra lateral con la cantidad de NUEVOS pedidos pendientes
     if (badge) {
-      badge.textContent = activeEmails.length;
-      if (activeEmails.length > 0) {
+      badge.textContent = newOrders.length;
+      if (newOrders.length > 0) {
         badge.classList.remove('hidden');
       } else {
         badge.classList.add('hidden');
@@ -2023,9 +2366,24 @@ class OutlookSyncManager {
 
     if (!container) return;
 
-    if (activeEmails.length === 0) {
+    // Determinar qué lista mostrar según la sub-pestaña seleccionada (Por defecto NUEVO_PEDIDO)
+    let toDisplay = newOrders;
+    if (this.currentInboxTab === 'ESTATUS_TICKET') toDisplay = statusQueries;
+    else if (this.currentInboxTab === 'SIN_TICKET') toDisplay = noTicketList;
+    else if (this.currentInboxTab === 'ALL') toDisplay = activeEmails;
+
+    if (toDisplay.length === 0) {
       container.innerHTML = '';
-      if (emptyState) emptyState.classList.remove('hidden');
+      if (emptyState) {
+        emptyState.classList.remove('hidden');
+        const emptyTitle = emptyState.querySelector('h3');
+        if (emptyTitle) {
+          if (this.currentInboxTab === 'NUEVO_PEDIDO') emptyTitle.textContent = 'No hay pedidos nuevos pendientes de aprobación';
+          else if (this.currentInboxTab === 'ESTATUS_TICKET') emptyTitle.textContent = 'No hay consultas de estatus pendientes';
+          else if (this.currentInboxTab === 'SIN_TICKET') emptyTitle.textContent = 'No hay solicitudes sin registrar pendientes';
+          else emptyTitle.textContent = 'No hay solicitudes pendientes en la bandeja';
+        }
+      }
       return;
     }
 
@@ -2033,8 +2391,9 @@ class OutlookSyncManager {
 
     const catalog = MoonshineStore.getCatalog();
     const areasList = ['Línea SMT 01', 'Línea SMT 02', 'Backend / Ensamble', 'Calidad / Metrología', 'Almacén / Kitting', 'Mantenimiento', 'Ingeniería / NPI', 'Kaizen / Lean'];
+    const allOrders = MoonshineStore.getOrders();
 
-    container.innerHTML = activeEmails.map(em => {
+    container.innerHTML = toDisplay.map(em => {
       const initials = (em.sender || 'MS')
         .split(' ')
         .map(n => n[0])
@@ -2042,6 +2401,161 @@ class OutlookSyncManager {
         .join('')
         .toUpperCase();
 
+      // =======================================================
+      // CASO 1: CONSULTA DE ESTATUS DE TICKET
+      // =======================================================
+      if (em.categoria === 'ESTATUS_TICKET') {
+        const fol = (em.folioDetectado || '').toUpperCase();
+        const matchedOrder = allOrders.find(o => fol && (o.id.toUpperCase() === fol || o.id.includes(fol)));
+
+        let statusBoxHtml = '';
+        if (matchedOrder) {
+          const deliveryStr = EmailReportGenerator.formatDeliveryDateWithBuffer(matchedOrder);
+          let stateBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">📋 ${matchedOrder.estado}</span>`;
+          if (matchedOrder.estado === 'En Fabricación') {
+            stateBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">🔨 En Fabricación</span>`;
+          } else if (matchedOrder.estado === 'Listo para Entrega') {
+            stateBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">✅ Listo para Entrega</span>`;
+          }
+
+          statusBoxHtml = `
+            <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3 text-xs space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-black text-indigo-950">${matchedOrder.id}</span>
+                ${stateBadge}
+              </div>
+              <p class="font-bold text-slate-800 text-[11px]">${matchedOrder.estructuraNombre} (${matchedOrder.cantidad} pz)</p>
+              <div class="text-[11px] text-slate-600 flex items-center space-x-1">
+                <span>🚚 Entrega:</span>
+                <span class="font-extrabold text-indigo-900">${deliveryStr}</span>
+              </div>
+              <div class="text-[10px] text-slate-500">
+                👤 Técnico: <span class="font-bold text-slate-700">${matchedOrder.tecnicoAsignadoNombre || 'Técnico de Turno'}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          statusBoxHtml = `
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+              <p class="font-bold flex items-center gap-1.5">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                <span>Folio ${fol ? `"${fol}"` : 'no especificado'}</span>
+              </p>
+              <p class="text-[11px] text-amber-700 mt-1">El ticket no se encuentra registrado en el sistema local. Se enviará correo solicitando confirmar su folio o consultar el portal.</p>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-white rounded-2xl p-4 shadow-sm border-2 border-indigo-200 hover:border-indigo-400 transition space-y-3" id="email-card-${em.id}">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-xs">
+                  ${initials}
+                </div>
+                <div>
+                  <div class="flex items-center space-x-1.5">
+                    <h4 class="font-bold text-slate-900 text-sm">${em.sender || 'Solicitante'}</h4>
+                    <span class="bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">🔍 Estatus de Ticket</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400">${em.receivedTime || 'Reciente'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h5 class="text-xs font-bold text-slate-800 mb-1">${em.subject || 'Consulta de Estatus'}</h5>
+              <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed">
+                "${em.preview || em.body || ''}"
+              </p>
+            </div>
+
+            ${statusBoxHtml}
+
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+              <button onclick="OutlookSyncManager.dismissEmail('${em.id}')" class="text-xs text-slate-500 hover:text-red-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition">
+                Descartar
+              </button>
+              <div class="flex items-center space-x-2">
+                <button onclick="OutlookSyncManager.copyEmailReply('${em.id}', 'status')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 transition flex items-center space-x-1" title="Copiar texto de respuesta">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span>Copiar</span>
+                </button>
+                <button onclick="OutlookSyncManager.sendEmailReply('${em.id}', 'status')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  <span>⚡ Responder por Outlook</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // =======================================================
+      // CASO 2: SOLICITUD INFORMAL SIN TICKET REGISTRADO
+      // =======================================================
+      if (em.categoria === 'SIN_TICKET') {
+        return `
+          <div class="bg-white rounded-2xl p-4 shadow-sm border-2 border-amber-300 hover:border-amber-400 transition space-y-3" id="email-card-${em.id}">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-full bg-amber-600 text-white flex items-center justify-center font-black text-xs">
+                  ${initials}
+                </div>
+                <div>
+                  <div class="flex items-center space-x-1.5">
+                    <h4 class="font-bold text-slate-900 text-sm">${em.sender || 'Solicitante'}</h4>
+                    <span class="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-300">⚠️ Solicitud Sin Ticket</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400">${em.receivedTime || 'Reciente'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h5 class="text-xs font-bold text-slate-800 mb-1">${em.subject || 'Solicitud por correo'}</h5>
+              <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed">
+                "${em.preview || em.body || ''}"
+              </p>
+            </div>
+
+            <div class="bg-amber-50 rounded-xl p-3 border border-amber-200 text-xs text-amber-900 space-y-1">
+              <p class="font-extrabold flex items-center space-x-1">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-amber-700"></i>
+                <span>Requiere Registro en el Portal</span>
+              </p>
+              <p class="text-[11px] text-amber-800">
+                Esta persona solicitó estructuras por correo sin folio oficial. Envíale la respuesta automática con el link para que sea tomada en cuenta.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+              <div class="flex items-center space-x-1">
+                <button onclick="OutlookSyncManager.dismissEmail('${em.id}')" class="text-xs text-slate-500 hover:text-red-700 font-semibold px-2 py-1.5 rounded-lg hover:bg-red-50 transition">
+                  Descartar
+                </button>
+                <button onclick="OutlookSyncManager.convertEmailToOrder('${em.id}')" class="text-xs text-blue-700 hover:text-blue-900 font-bold px-2 py-1.5 rounded-lg hover:bg-blue-50 transition" title="Pasar al formulario de Nuevo Pedido">
+                  + Pedido Manual
+                </button>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="OutlookSyncManager.copyEmailReply('${em.id}', 'noticket')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 transition flex items-center space-x-1" title="Copiar enlace y texto de respuesta">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span>Copiar Link</span>
+                </button>
+                <button onclick="OutlookSyncManager.sendEmailReply('${em.id}', 'noticket')" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  <span>⚡ Enviar Link por Outlook</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // =======================================================
+      // CASO 3: NUEVO PEDIDO FORMAL (BANDEJA PRINCIPAL)
+      // =======================================================
       const currentPriority = em.selectedPriority || em.prioridadSugerida || 'Normal';
 
       // Detectar estructura seleccionada o sugerida
@@ -2089,6 +2603,9 @@ class OutlookSyncManager {
                 <p class="text-[11px] text-slate-400">${em.receivedTime || 'Reciente'}</p>
               </div>
             </div>
+            <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-black px-2 py-0.5 rounded-full">
+              📥 Nuevo Pedido
+            </span>
           </div>
 
           <div>
@@ -2156,6 +2673,82 @@ class OutlookSyncManager {
     }).join('');
 
     if (window.lucide) lucide.createIcons();
+  }
+
+  static async sendEmailReply(emailId, replyType) {
+    const state = this.getState();
+    const email = (state.emails || []).find(e => e.id === emailId);
+    if (!email) return;
+
+    const allOrders = MoonshineStore.getOrders();
+    const fol = (email.folioDetectado || '').toUpperCase();
+    const matchedOrder = allOrders.find(o => fol && (o.id.toUpperCase() === fol || o.id.includes(fol)));
+    const portalUrl = AIEmailClassifier.getSettings().portalUrl || (state.networkInfo?.networkUrl || window.location.href);
+
+    let replyBody = '';
+    let replySubject = `RE: ${email.subject || 'Solicitud Moonshine Axiom'}`;
+
+    if (replyType === 'status') {
+      replyBody = AIEmailClassifier.generateStatusReply(email, matchedOrder, portalUrl);
+    } else {
+      replyBody = AIEmailClassifier.generateNoTicketReply(email, portalUrl);
+    }
+
+    try {
+      const isLocal8080 = window.location.protocol === 'http:' && window.location.port === '8080';
+      const apiBase = isLocal8080 ? '' : 'http://localhost:8080';
+      const res = await fetch(`${apiBase}/api/send-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId: email.id,
+          to: email.senderEmail || '',
+          subject: replySubject,
+          body: replyBody
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          showToast(`⚡ ¡Respuesta enviada automáticamente vía Outlook a ${email.sender}!`, 'success');
+          this.dismissEmail(emailId);
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback a mailto y portapapeles si no hay servidor local
+    }
+
+    try {
+      await navigator.clipboard.writeText(replyBody);
+    } catch (e) {}
+
+    const mailtoUrl = `mailto:${encodeURIComponent(email.senderEmail || '')}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`;
+    window.location.href = mailtoUrl;
+    showToast('📋 Respuesta copiada al portapapeles y abierta en Outlook.', 'success');
+  }
+
+  static async copyEmailReply(emailId, replyType) {
+    const state = this.getState();
+    const email = (state.emails || []).find(e => e.id === emailId);
+    if (!email) return;
+
+    const allOrders = MoonshineStore.getOrders();
+    const fol = (email.folioDetectado || '').toUpperCase();
+    const matchedOrder = allOrders.find(o => fol && (o.id.toUpperCase() === fol || o.id.includes(fol)));
+    const portalUrl = AIEmailClassifier.getSettings().portalUrl || (state.networkInfo?.networkUrl || window.location.href);
+
+    const replyBody = replyType === 'status'
+      ? AIEmailClassifier.generateStatusReply(email, matchedOrder, portalUrl)
+      : AIEmailClassifier.generateNoTicketReply(email, portalUrl);
+
+    try {
+      await navigator.clipboard.writeText(replyBody);
+      showToast('📋 Texto de respuesta copiado al portapapeles listo para enviar.', 'success');
+    } catch (e) {
+      prompt('Copia esta respuesta:', replyBody);
+    }
   }
 
   static setCardPriority(emailId, priority) {
@@ -2423,6 +3016,12 @@ Equipo Moonshine Axiom`;
       prioridadSugerida = 'Alta';
     }
 
+    // 8. Clasificación inteligente con IA / Motor Local (typo-tolerant)
+    const classification = AIEmailClassifier.classifyLocal({ body: text, subject, sender });
+    const categoria = classification.categoria || 'NUEVO_PEDIDO';
+    const folioDetectado = classification.folio || null;
+    const intencion = classification.intencion || '';
+
     const newEmail = {
       id: 'REQ-' + Date.now(),
       sender,
@@ -2438,15 +3037,28 @@ Equipo Moonshine Axiom`;
       selectedPriority: prioridadSugerida,
       areaSugerida,
       cantidad,
+      categoria,
+      folioDetectado,
+      intencion,
       palabrasDetectadas: matchedWords.length > 0 ? matchedWords.join(', ') : 'Moonshine'
     };
 
     if (!Array.isArray(state.emails)) state.emails = [];
     state.emails.unshift(newEmail);
     this.saveState(state);
+
+    // Ajustar sub-pestaña para visualizar la solicitud
+    this.currentInboxTab = categoria;
     this.renderInbox();
     this.updateNotificationBanner();
-    showToast('✅ Solicitud agregada a la bandeja. El supervisor puede revisarla y aprobarla.', 'success');
+
+    if (categoria === 'ESTATUS_TICKET') {
+      showToast(`🔍 Consulta de estatus detectada ${folioDetectado ? `para el ticket ${folioDetectado}` : ''}. Puedes responder con 1 clic.`, 'info');
+    } else if (categoria === 'SIN_TICKET') {
+      showToast('⚠️ Solicitud sin ticket detectada. Puedes enviarle el link del portal con 1 clic.', 'warning');
+    } else {
+      showToast('✅ Solicitud de Pedido Nuevo agregada a la bandeja lista para revisión y aprobación.', 'success');
+    }
   }
 
   static updateNotificationBanner() {
@@ -2761,12 +3373,46 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => SupabaseCloudSync.init(), 500);
 });
 
+// ==========================================
+// FUNCIÓN GLOBAL: MODIFICAR PRIORIDAD EN EL PLAN Y RE-SECUENCIAR
+// ==========================================
+function updateOrderPriority(orderId, newPriority) {
+  const orders = MoonshineStore.getOrders();
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const oldPriority = order.prioridad;
+  if (oldPriority === newPriority) return;
+
+  order.prioridad = newPriority;
+  MoonshineStore.saveOrders(orders);
+
+  // Recalcular el plan maestro con la nueva prioridad ponderada
+  SchedulingEngine.runAutoSchedule();
+
+  // Refrescar todas las vistas en vivo
+  if (typeof renderWeeklyGrid === 'function') renderWeeklyGrid();
+  if (typeof renderDeliveryStatusPlan === 'function') renderDeliveryStatusPlan();
+  if (typeof renderOrdersTable === 'function') renderOrdersTable();
+  if (typeof updateKPIs === 'function') updateKPIs();
+  if (typeof renderTallerFloor === 'function') renderTallerFloor();
+  if (typeof renderTechniciansEfficiency === 'function') renderTechniciansEfficiency();
+
+  if (newPriority === 'Crítica') {
+    showToast(`🚨 Pedido ${orderId} elevado a URGENTE. El Plan Maestro 24/7 se ha re-secuenciado con prioridad máxima.`, 'error');
+  } else {
+    showToast(`Prioridad de ${orderId} actualizada a ${newPriority}. Plan recalculado.`, 'success');
+  }
+}
+window.updateOrderPriority = updateOrderPriority;
+
 // Exportar globalmente para index.html
 window.MoonshineStore = MoonshineStore;
 window.SchedulingEngine = SchedulingEngine;
 window.EmailReportGenerator = EmailReportGenerator;
 window.SharePointBridge = SharePointBridge;
 window.OutlookSyncManager = OutlookSyncManager;
+window.AIEmailClassifier = AIEmailClassifier;
 window.SupabaseCloudSync = SupabaseCloudSync;
 window.DAYS_OF_WEEK = DAYS_OF_WEEK;
 window.SHIFTS_DEF = SHIFTS_DEF;

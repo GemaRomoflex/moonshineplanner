@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual Paso a Paso — Plan Maestro en Power BI y SharePoint (Moonshine)</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 14mm 15mm 14mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 10.5pt;
+      margin: 0;
+      padding: 0;
+    }
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #ffffff;
+      padding: 20px 24px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+    .header-banner .tag {
+      display: inline-block;
+      background: #10b981;
+      color: #052e16;
+      font-weight: 800;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+    .header-banner h1 {
+      margin: 0 0 6px 0;
+      font-size: 17pt;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .header-banner p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 10pt;
+    }
+    h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+    p {
+      margin: 6px 0;
+    }
+    ul, ol {
+      margin: 6px 0 10px 0;
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    .box-info {
+      background: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 9.8pt;
+      page-break-inside: avoid;
+    }
+    .box-success {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 9.8pt;
+      page-break-inside: avoid;
+    }
+    .box-warn {
+      background: #fffbeb;
+      border-left: 4px solid #d97706;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 9.8pt;
+      page-break-inside: avoid;
+    }
+    .step-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      background: #ffffff;
+      page-break-inside: avoid;
+    }
+    .step-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 11.5pt;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .step-badge {
+      background: #2563eb;
+      color: #ffffff;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 9pt;
+      font-weight: 800;
+    }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 9.5pt;
+      font-weight: 600;
+    }
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8.5pt;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.45;
+      margin: 8px 0;
+      page-break-inside: avoid;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      text-align: left;
+      padding: 7px 10px;
+      font-weight: 700;
+    }
+    td {
+      border-bottom: 1px solid #e2e8f0;
+      padding: 7px 10px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+    .flow-item {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .flow-item h4 {
+      margin: 0 0 4px 0;
+      font-size: 10pt;
+      color: #1e3a8a;
+    }
+    .flow-item p {
+      margin: 0;
+      font-size: 9pt;
+      color: #334155;
+    }
+    .footer {
+      margin-top: 22px;
+      padding-top: 10px;
+      border-top: 1px solid #cbd5e1;
+      text-align: center;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-banner">
+    <div class="tag">100% Automático • Sin Web App • Cero Mantenimiento Manual</div>
+    <h1>Guía Paso a Paso: Plan Maestro Moonshine en Power BI + SharePoint</h1>
+    <p>Integración directa de las 2 Listas de SharePoint (PowerApp Estructuras + PowerApp Mantenimientos) con generación automática del Plan en Power BI.</p>
+  </div>
+
+  <h2>1. ¿Cómo funciona esta solución? (Panorama General)</h2>
+  <p>Para que tú puedas entregar el proyecto al equipo de Moonshine y a tu jefe <strong>sin tener que darle mantenimiento a páginas externas ni subir archivos a mano</strong>, todo el flujo vive dentro de las herramientas oficiales de la empresa:</p>
+
+  <div class="flow-grid">
+    <div class="flow-item">
+      <h4>1️⃣ Entrada (PowerApps)</h4>
+      <p>La planta sigue registrando solicitudes en las <strong>2 PowerApps actuales</strong>, que llenan las 2 listas de SharePoint (<em>Estructuras</em> y <em>Mantenimientos</em>).</p>
+    </div>
+    <div class="flow-item">
+      <h4>2️⃣ Motor (Power BI)</h4>
+      <p>Power BI une ambas listas, busca las horas de las <strong>48+ estructuras incrustadas</strong>, ordena la fila por prioridad y calcula <strong>Turno</strong> y <strong>Fecha de Entrega (+3 días)</strong>.</p>
+    </div>
+    <div class="flow-item">
+      <h4>3️⃣ Operación Diaria</h4>
+      <p>Cuando Moonshine termina un trabajo, solo cambia su estatus a <em>"Entregado"</em> en SharePoint/PowerApp y el Power BI recalcula toda la fila solo.</p>
+    </div>
+  </div>
+
+  <h2>2. Archivos Listos que tienes en la Carpeta <code>powerbi_standalone/</code></h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 36%;">Archivo</th>
+        <th>¿Para qué sirve y dónde se pega?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>1_PowerQuery_Listas_SharePoint.pq</code></td>
+        <td><strong>Conector y Unificador:</strong> Se pega en el <em>Editor Avanzado de Power Query</em>. Une las 2 listas de SharePoint y les cruza automáticamente las horas y precios del catálogo de estructuras.</td>
+      </tr>
+      <tr>
+        <td><code>2_DAX_Motor_Plan_Automatico.dax</code></td>
+        <td><strong>Motor del Plan Maestro:</strong> Fórmulas DAX que ordenan la fila por prioridad y fecha, calculan las horas acumuladas, el turno (T1/T2/T3) y la fecha compromiso (+3 días).</td>
+      </tr>
+      <tr>
+        <td><code>3_Tema_Corporativo_Moonshine.json</code></td>
+        <td><strong>Diseño Visual:</strong> Se importa en <em>Ver &rarr; Temas</em> en Power BI para aplicar los colores ejecutivos de Moonshine en 1 clic.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Tu Paso a Paso en Power BI Desktop (Se hace 1 sola vez — 15 min)</h2>
+
+  <div class="step-card">
+    <div class="step-title">
+      <span class="step-badge">PASO 1</span>
+      <span>Conectar y Unir tus 2 Listas de SharePoint en Power Query (4 min)</span>
+    </div>
+    <ol>
+      <li>Abre <strong>Power BI Desktop</strong> con un informe nuevo en blanco.</li>
+      <li>En la pestaña <strong>Inicio</strong> (arriba), haz clic en el botón <strong>"Transformar datos"</strong> (se abre la ventana de <em>Power Query</em>).</li>
+      <li>En el panel izquierdo (<em>Consultas</em>), haz <strong>clic derecho en un espacio en blanco &rarr; Nueva consulta &rarr; Consulta en blanco</strong>.</li>
+      <li>A la derecha (en <em>Propiedades &rarr; Nombre</em>), cámbiale el nombre a esa consulta por: <code>Plan_Moonshine</code></li>
+      <li>Arriba haz clic en el botón <strong>"Editor avanzado"</strong>, borra el texto que aparece y <strong>pega todo el contenido del archivo <code>1_PowerQuery_Listas_SharePoint.pq</code></strong>.</li>
+      <li>En las líneas 15, 16 y 17 del código que pegaste, cambia únicamente los textos entre comillas por tus datos reales:</li>
+    </ol>
+    <pre>URL_Sitio_SharePoint = "https://flextronics365.sharepoint.com/sites/TU_SITIO_AQUI",
+Nombre_Lista_Estructuras = "Solicitudes_Estructuras",       // Nombre de tu Lista 1 (PowerApp Estructuras)
+Nombre_Lista_Mantenimientos = "Solicitudes_Mantenimientos", // Nombre de tu Lista 2 (PowerApp Mantenimientos)</pre>
+    <div class="box-warn">
+      <strong>⚠️ Nota importante del URL de SharePoint:</strong> Pega el link únicamente hasta el nombre de tu sitio (ejemplo: <code>https://flextronics365.sharepoint.com/sites/Moonshine</code>), <strong>no</strong> incluyas <code>/Lists/...</code> ni <code>/AllItems.aspx</code>.
+    </div>
+    <ol start="7">
+      <li>Haz clic en <strong>Listo</strong>. Si aparece una barra amarilla pidiendo credenciales, haz clic en <strong>Editar credenciales &rarr; Cuenta de Microsoft (Organización) &rarr; Iniciar sesión</strong> con tu cuenta de Flex y dale a <strong>Conectar</strong>.</li>
+      <li>Arriba a la izquierda haz clic en <strong>"Cerrar y aplicar"</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="step-card">
+    <div class="step-title">
+      <span class="step-badge">PASO 2</span>
+      <span>Pegar las Fórmulas DAX que Calculan el Plan Automáticamente (5 min)</span>
+    </div>
+    <p>Abre el archivo <code>2_DAX_Motor_Plan_Automatico.dax</code> en el Bloc de Notas. En Power BI Desktop, haz clic en tu tabla <code>Plan_Moonshine</code> (en el panel derecho):</p>
+    <h3>A) Crear las 7 Columnas del Plan (Clic en el botón "Nueva columna" arriba por cada una):</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 6%;">#</th>
+          <th style="width: 32%;">Nombre de la Columna</th>
+          <th>¿Qué calcula automáticamente?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td><code>Prioridad_Peso</code></td>
+          <td>Asigna el orden de urgencia: Crítica = 1, Alta = 2, Normal = 3, Baja = 4.</td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td><code>Clave_Ordenamiento_FIFO</code></td>
+          <td>Pone primero lo que ya está <em>En Fabricación</em>, luego por Prioridad y luego por Fecha de solicitud.</td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td><code>Posicion_En_Fila</code></td>
+          <td>Numera del <strong>#1 en adelante</strong> todos los pedidos activos en la cola del taller.</td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td><code>Horas_Acumuladas_Cola</code></td>
+          <td>Suma las horas estimadas de todos los pedidos anteriores en la fila más el actual.</td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td><code>Turno_Programado</code></td>
+          <td>Según las horas acumuladas y la capacidad (15h por turno / 45h por día), asigna <strong>T1, T2 o T3</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td>
+          <td><code>Fecha_Fin_Fabricacion</code></td>
+          <td>Calcula en qué fecha calendario se termina de fabricar a partir de hoy (<code>TODAY()</code>).</td>
+        </tr>
+        <tr>
+          <td><strong>7</strong></td>
+          <td><code>Fecha_Compromiso_Entrega</code></td>
+          <td>Le suma automáticamente los <strong>+3 días de holgura</strong> a la fecha de término de fabricación.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><em>Tip:</em> Al crear las columnas 6 y 7, selecciónalas y arriba en <strong>Formato</strong> cámbialas a <strong>Fecha corta (Short Date)</strong> para que no muestren la hora <code>12:00:00 AM</code>.</p>
+
+    <h3>B) Crear las Medidas para las Tarjetas Superiores (Clic en el botón "Nueva medida" arriba):</h3>
+    <ul>
+      <li>Copia y pega del Bloque B del archivo <code>.dax</code> las medidas: <code>KPI_Total_Pendientes</code>, <code>KPI_Estructuras_Pendientes</code>, <code>KPI_Mantenimientos_Pendientes</code>, <code>KPI_Horas_En_Cola</code>, <code>KPI_Listos_Para_Entrega</code> y (opcional) <code>Vista_HTML_Plan_Moonshine</code>.</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <div class="step-title">
+      <span class="step-badge">PASO 3</span>
+      <span>Aplicar el Tema Visual y Acomodar el Dashboard (4 min)</span>
+    </div>
+    <ol>
+      <li><strong>Cargar colores corporativos:</strong> Ve arriba a la pestaña <strong>Ver (View) &rarr; Temas &rarr; Buscar temas</strong> y selecciona el archivo <code>3_Tema_Corporativo_Moonshine.json</code>.</li>
+      <li><strong>Fila Superior (4 Tarjetas KPI):</strong> Inserta 4 visuales de <em>Tarjeta (Card)</em> arriba y pon en cada una:
+        <code>KPI_Total_Pendientes</code>, <code>KPI_Estructuras_Pendientes</code>, <code>KPI_Mantenimientos_Pendientes</code> y <code>KPI_Horas_En_Cola</code>.
+      </li>
+      <li><strong>Filtros Rápidos (Segmentadores):</strong> Inserta 2 <em>Segmentadores de datos (Slicer)</em>: uno con <code>Origen_Lista</code> (para filtrar <em>PowerApp Estructuras</em> vs <em>PowerApp Mantenimientos</em>) y otro con <code>Prioridad</code>.</li>
+      <li><strong>Gráficas Centrales:</strong>
+        <ul>
+          <li><em>Gráfico de Columnas Apiladas (Carga por Área):</em> Eje X = <code>Area</code> | Leyenda = <code>Tipo_Trabajo</code> | Eje Y = <code>Horas_Estimadas</code>.</li>
+          <li><em>Matriz de Carga por Turnos:</em> Filas = <code>Turno_Programado</code> | Columnas = <code>Fecha_Fin_Fabricacion</code> | Valores = <code>Horas_Estimadas</code>.</li>
+        </ul>
+      </li>
+      <li><strong>Tabla Principal abajo (El Plan Maestro de Producción y Entregas):</strong>
+        <ul>
+          <li>Inserta un visual de <strong>Tabla</strong> a todo lo ancho y arrastra estas columnas en orden:
+            <code>Posicion_En_Fila</code>, <code>Folio</code>, <code>Tipo_Trabajo</code>, <code>Solicitante</code>, <code>Area</code>, <code>Estructura_o_Trabajo</code>, <code>Cantidad</code>, <code>Horas_Estimadas</code>, <code>Prioridad</code>, <code>Estado</code>, <code>Turno_Programado</code>, <code>Especialidad_Requerida</code> y <code>Fecha_Compromiso_Entrega</code>.</li>
+          <li><em>(Opción Pro):</em> Si quieres que la tabla se vea idéntica a una app web con insignias de colores, en <em>Visualizaciones &rarr; Obtener más objetos visuales</em> busca el visual gratuito <strong>"HTML Content"</strong> y arrástrale únicamente la medida <code>Vista_HTML_Plan_Moonshine</code>.</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <div class="step-card">
+    <div class="step-title">
+      <span class="step-badge">PASO 4</span>
+      <span>Publicar y Activar Actualización Automática en la Nube (2 min)</span>
+    </div>
+    <ol>
+      <li>Guarda tu archivo y haz clic arriba a la derecha en el botón <strong>"Publicar" (Publish)</strong> en Power BI Desktop.</li>
+      <li>Abre el reporte publicado en <strong>app.powerbi.com</strong>.</li>
+      <li>Ve a la configuración del <strong>Conjunto de datos (Modelo semántico)</strong> que acabas de subir:
+        <ul>
+          <li>En <strong>Credenciales de origen de datos</strong>, haz clic en <em>Editar credenciales</em>, elige <strong>OAuth2</strong> y nivel <strong>Organizacional</strong>, e inicia sesión con tu cuenta de Flex.</li>
+          <li>En <strong>Actualización programada (Scheduled refresh)</strong>, actívala y pon los horarios en que quieres que se actualice solo (ej. 7:00 AM, 12:00 PM y 4:00 PM).</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="box-success">
+      <strong>✅ ¡Listo! Con esto te desentiendes al 100%:</strong> La gente de planta sigue metiendo pedidos en las 2 PowerApps, el equipo de Moonshine solo cambia el estado a <em>"Entregado"</em> en SharePoint cuando termina un trabajo, y el Dashboard de Power BI recalcula solito el plan todos los días.
+    </div>
+  </div>
+
+  <div class="footer">
+    Manual de Implementación Autónoma • Moonshine Flow &amp; Power BI Integration • Flex / Axiom
+  </div>
+
+</body>
+</html>

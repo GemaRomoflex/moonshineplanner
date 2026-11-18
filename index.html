@@ -420,6 +420,10 @@
               <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-600"></i>
               <span>Activar Auto-Lectura Outlook (1 vez)</span>
             </a>
+            <button onclick="openModal('modalConfigAI')" class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl border border-indigo-200 transition flex items-center space-x-1.5" title="Configurar API de IA para filtrado y respuestas inteligentes">
+              <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>IA & Respuestas</span>
+            </button>
             <button onclick="openModal('modalPasteEmail')" class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl border border-blue-200 transition flex items-center space-x-1.5">
               <i data-lucide="clipboard-paste" class="w-3.5 h-3.5 text-blue-600"></i>
               <span>+ Pegar Solicitud</span>
@@ -447,6 +451,35 @@
           <button onclick="OutlookSyncManager.resetKeywords()" class="text-[11px] text-blue-600 hover:text-blue-800 font-semibold hover:underline">
             Restablecer
           </button>
+        </div>
+
+        <!-- Barra de Pestañas de Filtrado de la Bandeja (Pedidos Nuevos vs Estatus vs Sin Ticket) -->
+        <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5" id="inboxSubTabsContainer">
+            <button onclick="OutlookSyncManager.setInboxTab('NUEVO_PEDIDO')" id="tabBtn-NUEVO_PEDIDO" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-blue-600 text-white shadow-xs">
+              <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+              <span>Pedidos Nuevos</span>
+              <span id="badgeTabNuevos" class="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-blue-700 font-black">0</span>
+            </button>
+            <button onclick="OutlookSyncManager.setInboxTab('ESTATUS_TICKET')" id="tabBtn-ESTATUS_TICKET" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200">
+              <i data-lucide="help-circle" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>Consultas de Estatus</span>
+              <span id="badgeTabEstatus" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-800 font-bold">0</span>
+            </button>
+            <button onclick="OutlookSyncManager.setInboxTab('SIN_TICKET')" id="tabBtn-SIN_TICKET" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i>
+              <span>Sin Ticket / Por Redirigir</span>
+              <span id="badgeTabSinTicket" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-800 font-bold">0</span>
+            </button>
+            <button onclick="OutlookSyncManager.setInboxTab('ALL')" id="tabBtn-ALL" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-600"></i>
+              <span>Todos</span>
+              <span id="badgeTabTodos" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-800 font-bold">0</span>
+            </button>
+          </div>
+          <div class="text-[11px] text-slate-500 font-medium px-2" id="inboxTabDescription">
+            📥 Mostrando únicamente pedidos nuevos listos para autorizar e ingresar al Plan Maestro
+          </div>
         </div>
 
         <!-- Estado Vacío Limpio -->
@@ -1221,6 +1254,89 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
     </div>
   </div>
 
+  <!-- ================= MODAL: CONFIGURACIÓN DE IA & AUTO-RESPUESTAS ================= -->
+  <div id="modalConfigAI" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-2.5">
+          <div class="p-2.5 bg-indigo-100 text-indigo-700 rounded-2xl">
+            <i data-lucide="bot" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-base text-slate-900">Configurar IA & Filtración de Correos</h3>
+            <p class="text-xs text-slate-500">Razonamiento inteligente de solicitudes y respuestas automáticas</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalConfigAI')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="aiConfigForm" onsubmit="saveAIConfig(event)" class="space-y-4 pt-4 text-xs">
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-700 mb-1">Proveedor de Inteligencia Artificial</label>
+          <select id="aiProviderSelect" onchange="onAIProviderChange(this.value)" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white font-semibold outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="gemini" selected>Google Gemini (Recomendado — Ultra Rápido y con Capa Gratuita)</option>
+            <option value="groq">Groq Cloud (Llama 3.3 70B — Latencia &lt; 300 ms)</option>
+            <option value="openai">OpenAI (GPT-4o mini)</option>
+            <option value="local">Motor Inteligente Local Heurístico (Sin costo / Sin API Key)</option>
+          </select>
+        </div>
+
+        <div id="aiApiKeyContainer">
+          <label class="block font-bold uppercase tracking-wider text-slate-700 mb-1">Clave de API (API Key)</label>
+          <div class="relative">
+            <input type="password" id="aiApiKeyInput" placeholder="Pega tu API Key de Gemini / Groq / OpenAI..." class="w-full p-2.5 pr-10 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+            <button type="button" onclick="toggleApiKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700">
+              <i data-lucide="eye" class="w-4 h-4" id="eyeIconApiKey"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1" id="aiApiKeyHelp">Obtén tu clave gratuita en Google AI Studio (<a href="https://aistudio.google.com/" target="_blank" class="text-indigo-600 underline">aistudio.google.com</a>). Se guarda de forma local y segura en tu navegador.</p>
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-700 mb-1">Modelo de Lenguaje</label>
+          <input type="text" id="aiModelInput" value="gemini-1.5-flash" class="w-full p-2.5 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label class="block font-bold uppercase tracking-wider text-slate-700 mb-1">Enlace del Portal para Enviar a Solicitantes</label>
+          <input type="text" id="aiPortalUrlInput" value="https://gemaromoflex.github.io/moonshineplanner/" class="w-full p-2.5 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+          <p class="text-[11px] text-slate-500 mt-1">Este link se insertará en las respuestas automáticas para que las personas registren sus tickets o consulten sus entregas.</p>
+        </div>
+
+        <div class="bg-indigo-50/60 p-3 rounded-2xl border border-indigo-100 space-y-2">
+          <h4 class="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600"></i>
+            <span>Capacidades Activas:</span>
+          </h4>
+          <ul class="list-disc pl-4 text-[11px] text-indigo-900 space-y-1">
+            <li><strong>Tolerancia a faltas de ortografía:</strong> Entiende palabras mal escritas como <em>extructura, carito, urjente, estasion, tiket</em>.</li>
+            <li><strong>Clasificación tripartita:</strong> Separa pedidos nuevos, consultas de estatus de tickets existentes y solicitudes sin registrar.</li>
+            <li><strong>Respuestas automáticas:</strong> Con 1 clic envía la fecha compromiso calculada por el Plan Maestro o el link de registro.</li>
+          </ul>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <button type="button" onclick="testAIConnection()" id="btnTestAI" class="px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition flex items-center space-x-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            <span>Probar Conexión</span>
+          </button>
+
+          <div class="flex space-x-2">
+            <button type="button" onclick="closeModal('modalConfigAI')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+              Cancelar
+            </button>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Guardar Configuración</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ================= MODAL: GUÍA OFICIAL DE SOLICITUDES & WHATSAPP EXPRESS ================= -->
   <div id="modalOfficialGuide" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -1481,6 +1597,20 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
     function openModal(modalId) {
       const el = document.getElementById(modalId);
       if (el) el.classList.remove('hidden');
+
+      if (modalId === 'modalConfigAI' && typeof AIEmailClassifier !== 'undefined') {
+        const s = AIEmailClassifier.getSettings();
+        const pSel = document.getElementById('aiProviderSelect');
+        const kInput = document.getElementById('aiApiKeyInput');
+        const mInput = document.getElementById('aiModelInput');
+        const urlInput = document.getElementById('aiPortalUrlInput');
+        if (pSel) pSel.value = s.provider || 'gemini';
+        if (kInput) kInput.value = s.apiKey || '';
+        if (mInput) mInput.value = s.model || 'gemini-1.5-flash';
+        if (urlInput) urlInput.value = s.portalUrl || window.location.href;
+        onAIProviderChange(s.provider || 'gemini');
+      }
+
       if (window.lucide) lucide.createIcons();
     }
 
@@ -1968,6 +2098,15 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
                     </div>
                     ${item.esCarryOver ? `<span class="inline-block mt-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">⚠️ Arrastre</span>` : ''}
                     ${item.esTermino ? `<span class="inline-block mt-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded ml-1">✔ Concluye</span>` : ''}
+                    <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                      <span class="text-[9px] font-bold text-slate-400 uppercase">Prioridad:</span>
+                      <select onchange="updateOrderPriority('${item.orderId}', this.value)" class="text-[10px] font-bold py-0.5 px-1 rounded border border-slate-300 bg-white cursor-pointer outline-none ${item.prioridad === 'Crítica' ? 'text-red-700 border-red-300 bg-red-50 font-black' : (item.prioridad === 'Alta' ? 'text-amber-700 border-amber-300 bg-amber-50 font-bold' : 'text-slate-700')}" title="Cambiar prioridad del pedido y re-secuenciar el plan en vivo">
+                        <option value="Crítica" ${item.prioridad === 'Crítica' ? 'selected' : ''}>🚨 Urgente</option>
+                        <option value="Alta" ${item.prioridad === 'Alta' ? 'selected' : ''}>⚡ Alta</option>
+                        <option value="Normal" ${item.prioridad === 'Normal' ? 'selected' : ''}>🔷 Media</option>
+                        <option value="Baja" ${item.prioridad === 'Baja' ? 'selected' : ''}>⚪ Baja</option>
+                      </select>
+                    </div>
                   </div>
                 `;
               }).join('');
@@ -2622,14 +2761,18 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       }
 
       tbody.innerHTML = filtered.map(o => {
-        let pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800">🔷 Media</span>';
-        if (o.prioridad === 'Crítica') {
-          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">🚨 Urgente</span>';
-        } else if (o.prioridad === 'Alta') {
-          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">⚡ Alta</span>';
-        } else if (o.prioridad === 'Baja') {
-          pBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">⚪ Baja</span>';
-        }
+        const prioritySelectHtml = `
+          <select onchange="updateOrderPriority('${o.id}', this.value)" class="text-xs font-bold py-1 px-2 rounded-lg border cursor-pointer outline-none transition shadow-2xs ${
+            o.prioridad === 'Crítica' ? 'bg-red-50 text-red-800 border-red-300 font-black' : 
+            (o.prioridad === 'Alta' ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold' : 
+            (o.prioridad === 'Baja' ? 'bg-slate-50 text-slate-700 border-slate-300 font-medium' : 'bg-blue-50 text-blue-800 border-blue-300 font-bold'))
+          }" title="Cambiar prioridad y re-secuenciar plan de producción en vivo">
+            <option value="Crítica" ${o.prioridad === 'Crítica' ? 'selected' : ''}>🚨 Urgente</option>
+            <option value="Alta" ${o.prioridad === 'Alta' ? 'selected' : ''}>⚡ Alta</option>
+            <option value="Normal" ${o.prioridad === 'Normal' ? 'selected' : ''}>🔷 Media</option>
+            <option value="Baja" ${o.prioridad === 'Baja' ? 'selected' : ''}>⚪ Baja</option>
+          </select>
+        `;
 
         const totalHrs = o.horasEstimadas || 4;
         const doneHrs = o.progresoHoras || 0;
@@ -2679,7 +2822,7 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
                 Cantidad: <strong>${o.cantidad} pza(s)</strong> &bull; ${o.tipoTrabajo || 'Estructura Nueva'}
               </div>
             </td>
-            <td class="py-3.5 px-3 text-center">${pBadge}</td>
+            <td class="py-3.5 px-3 text-center">${prioritySelectHtml}</td>
             <td class="py-3.5 px-3 text-center">${statusHtml}</td>
             <td class="py-3.5 px-3 bg-emerald-50/50 border-l-2 border-emerald-500">
               <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-700">Se entrega el día:</div>
@@ -2724,7 +2867,16 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
             <td class="py-3 px-3 text-center">${o.cantidad}</td>
             <td class="py-3 px-3 text-center font-mono font-bold">${o.horasEstimadas}h</td>
             <td class="py-3 px-3 text-center">
-              <span class="px-2 py-0.5 rounded-full text-[10px] ${pColor}">${o.prioridad}</span>
+              <select onchange="updateOrderPriority('${o.id}', this.value)" class="text-[10px] font-bold py-0.5 px-1.5 rounded border border-slate-300 bg-white cursor-pointer outline-none ${
+                o.prioridad === 'Crítica' ? 'bg-red-50 text-red-800 border-red-300 font-black' : 
+                (o.prioridad === 'Alta' ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold' : 
+                (o.prioridad === 'Baja' ? 'bg-slate-50 text-slate-700 border-slate-300 font-medium' : 'bg-blue-50 text-blue-800 border-blue-300 font-bold'))
+              }" title="Cambiar prioridad y re-secuenciar plan en vivo">
+                <option value="Crítica" ${o.prioridad === 'Crítica' ? 'selected' : ''}>🚨 Urgente</option>
+                <option value="Alta" ${o.prioridad === 'Alta' ? 'selected' : ''}>⚡ Alta</option>
+                <option value="Normal" ${o.prioridad === 'Normal' ? 'selected' : ''}>🔷 Media</option>
+                <option value="Baja" ${o.prioridad === 'Baja' ? 'selected' : ''}>⚪ Baja</option>
+              </select>
             </td>
             <td class="py-3 px-3 text-center">
               <span class="px-2 py-0.5 rounded-full text-[10px] ${sColor}">${o.estado}</span>
@@ -3369,6 +3521,91 @@ Asunto: URGENTE: 2 mesas de ensamble ergonómicas y 1 rack dinámico con perfil 
       settings.powerAutomateWebhook = url;
       MoonshineStore.saveSettings(settings);
       showToast('URL de Webhook Power Automate guardada.', 'success');
+    }
+
+    // ==========================================
+    // FUNCIONES DEL MODAL DE IA & CONFIGURACIÓN
+    // ==========================================
+    function onAIProviderChange(provider) {
+      const kContainer = document.getElementById('aiApiKeyContainer');
+      const mInput = document.getElementById('aiModelInput');
+      const hText = document.getElementById('aiApiKeyHelp');
+      if (provider === 'local') {
+        if (kContainer) kContainer.classList.add('hidden');
+        if (mInput) mInput.value = 'Motor Heurístico Local (Offline)';
+      } else {
+        if (kContainer) kContainer.classList.remove('hidden');
+        if (provider === 'gemini') {
+          if (mInput && (!mInput.value || mInput.value.includes('Motor') || mInput.value.includes('llama') || mInput.value.includes('gpt'))) mInput.value = 'gemini-1.5-flash';
+          if (hText) hText.innerHTML = 'Obtén tu clave gratuita en Google AI Studio (<a href="https://aistudio.google.com/" target="_blank" class="text-indigo-600 underline font-bold">aistudio.google.com</a>). Se guarda de forma local en tu navegador.';
+        } else if (provider === 'groq') {
+          if (mInput && (!mInput.value || mInput.value.includes('Motor') || mInput.value.includes('gemini') || mInput.value.includes('gpt'))) mInput.value = 'llama-3.3-70b-versatile';
+          if (hText) hText.innerHTML = 'Obtén tu clave gratuita en Groq Console (<a href="https://console.groq.com/" target="_blank" class="text-indigo-600 underline font-bold">console.groq.com</a>).';
+        } else if (provider === 'openai') {
+          if (mInput && (!mInput.value || mInput.value.includes('Motor') || mInput.value.includes('gemini') || mInput.value.includes('llama'))) mInput.value = 'gpt-4o-mini';
+          if (hText) hText.innerHTML = 'Ingresa tu clave de OpenAI Platform.';
+        }
+      }
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('aiApiKeyInput');
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function testAIConnection() {
+      const btn = document.getElementById('btnTestAI');
+      if (btn) btn.disabled = true;
+      const provider = document.getElementById('aiProviderSelect').value;
+      const apiKey = document.getElementById('aiApiKeyInput').value.trim();
+      const model = document.getElementById('aiModelInput').value.trim();
+
+      if (provider === 'local') {
+        showToast('✅ Motor Local Heurístico listo y activo (100% desconectado, con tolerancia a faltas ortográficas).', 'success');
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      if (!apiKey) {
+        showToast('Por favor ingresa una clave de API antes de probar.', 'warning');
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      showToast(`Conectando con ${provider.toUpperCase()}...`, 'info');
+
+      try {
+        const dummyEmail = {
+          subject: 'Consulta de estatus urgente',
+          body: 'Hola, ocupo saber cómo va el ticket MSH-2026-002 de la linea smt02 porfavor',
+          sender: 'Test Supervisor'
+        };
+        const testSettings = { provider, apiKey, model };
+        const res = await AIEmailClassifier.classifyWithLLM(dummyEmail, testSettings);
+        if (res && res.categoria) {
+          showToast(`⚡ ¡Conexión Exitosa con ${provider.toUpperCase()}! Clasificó la prueba como: "${res.categoria}".`, 'success');
+        } else {
+          showToast(`Respuesta recibida pero con formato inesperado de ${provider}.`, 'warning');
+        }
+      } catch (e) {
+        showToast(`❌ Error al conectar con ${provider}: ${e.message}`, 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function saveAIConfig(e) {
+      e.preventDefault();
+      const provider = document.getElementById('aiProviderSelect').value;
+      const apiKey = document.getElementById('aiApiKeyInput').value.trim();
+      const model = document.getElementById('aiModelInput').value.trim();
+      const portalUrl = document.getElementById('aiPortalUrlInput').value.trim();
+
+      const newSettings = { provider, apiKey, model, portalUrl };
+      AIEmailClassifier.saveSettings(newSettings);
+      closeModal('modalConfigAI');
+      showToast(`Configuración de IA (${provider.toUpperCase()}) guardada con éxito.`, 'success');
     }
 
     function closeModal(modalId) {

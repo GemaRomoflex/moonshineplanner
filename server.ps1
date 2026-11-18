@@ -1,4 +1,4 @@
-# ====================================================================
+﻿# ====================================================================
 # Servidor Local Web para Moonshine Flow Manager
 # Permite acceder a la app desde tablets y celulares en la red de planta
 # Y provee la API para escanear correos de Microsoft Outlook en vivo
@@ -35,8 +35,8 @@ Write-Host "========================================================" -Foregroun
 # Función para escanear Outlook de forma segura con timeout y múltiples palabras clave
 function Get-OutlookMoonshineEmails {
     param(
-        [string[]]$Keywords = @("moonshine", "estructuras", "estructura", "mesas", "mesa", "carritos", "carrito", "carro", "carros", "racks", "rack", "estaciones", "estacion", "estación", "perfil", "perfiles"),
-        [int]$MaxResults = 20
+        [string[]]$Keywords = @("moonshine", "estructuras", "estructura", "extructura", "extructuras", "mesas", "mesa", "carritos", "carrito", "carito", "carro", "carros", "racks", "rack", "rak", "estaciones", "estacion", "estación", "estasion", "perfil", "perfiles", "correo", "correos", "email", "solicitud", "solicitudes", "pedido", "pedidos", "ticket", "tickets", "tiket", "msh", "urgente", "urjente", "ensamble", "ensanble"),
+        [int]$MaxResults = 25
     )
 
     # 1. Verificar si Outlook está corriendo
@@ -56,7 +56,7 @@ function Get-OutlookMoonshineEmails {
         }
     }
 
-    # 2. Escanear buzón en segundo plano con límite de 4 segundos
+    # 2. Escanear buzón en segundo plano con límite de 5 segundos
     $scriptBlock = {
         param($kwList, $max, $cachePath)
         try {
@@ -78,12 +78,12 @@ function Get-OutlookMoonshineEmails {
                 }
             }
             if ($cleanKws.Count -eq 0) {
-                $cleanKws = @("moonshine", "estructuras", "estructura", "mesas", "mesa", "carritos", "carrito", "carro", "carros", "racks", "rack", "estaciones", "estacion", "estación", "perfil", "perfiles")
+                $cleanKws = @("moonshine", "estructuras", "estructura", "extructura", "extructuras", "mesas", "mesa", "carritos", "carrito", "carito", "carro", "carros", "racks", "rack", "rak", "estaciones", "estacion", "estación", "estasion", "perfil", "perfiles", "correo", "correos", "email", "solicitud", "solicitudes", "pedido", "pedidos", "ticket", "tickets", "tiket", "msh", "urgente", "urjente", "ensamble", "ensanble")
             }
             
             foreach ($item in $items) {
                 $inspected++
-                if ($inspected -gt 150 -or $results.Count -ge $max) { break }
+                if ($inspected -gt 180 -or $results.Count -ge $max) { break }
                 
                 try {
                     $subject = [string]$item.Subject
@@ -100,6 +100,13 @@ function Get-OutlookMoonshineEmails {
                         }
                     }
                     
+                    # Detección de patrones difusos y typos comunes (Fuzzy / Regex)
+                    if ($fullText -match "msh-\d{4}-\d{3}|msh\d+|extr?u[ck]tura|carr?ito|estaci[oó]n|estasi[oó]n|ur[gj]ente|ti[ck]+et|ensam?n?ble") {
+                        if ($matchedWords.Count -eq 0) {
+                            $matchedWords += "patrón-detectado"
+                        }
+                    }
+                    
                     if ($matchedWords.Count -gt 0) {
                         $senderName = try { $item.SenderName } catch { "Desconocido" }
                         $senderEmail = try { $item.SenderEmailAddress } catch { "" }
@@ -113,19 +120,19 @@ function Get-OutlookMoonshineEmails {
                         $clean = ($body -replace "[\r\n\t]+", " ").Trim()
                         $preview = if ($clean.Length -gt 250) { $clean.Substring(0, 250) + "..." } else { $clean }
                         
-                        # Detección inteligente de estructuras comunes
+                        # Detección inteligente de estructuras comunes (con tolerancia a typos)
                         $sugerenciaEstructura = ""
-                        if ($fullText -match "carro|carrito|kitting|tugger") { $sugerenciaEstructura = "Carro de Transporte ESD (Kitting)" }
-                        elseif ($fullText -match "rack|fifo|gravedad") { $sugerenciaEstructura = "Rack Dinámico FIFO por Gravedad (4 Niveles)" }
-                        elseif ($fullText -match "mesa|estacion|estación|workstation") { $sugerenciaEstructura = "Estación de Trabajo / Mesa de Ensamble Ergonómica" }
+                        if ($fullText -match "carr?o|carr?ito|kitting|tugger|charolas?") { $sugerenciaEstructura = "Carro de Transporte ESD (Kitting)" }
+                        elseif ($fullText -match "ra[ck]|fifo|gravedad") { $sugerenciaEstructura = "Rack Dinámico FIFO por Gravedad (4 Niveles)" }
+                        elseif ($fullText -match "mesa|estaci[oó]n|estasi[oó]n|workstation|ensam?n?ble") { $sugerenciaEstructura = "Estación de Trabajo / Mesa de Ensamble Ergonómica" }
                         elseif ($fullText -match "shadow|5s|tablero") { $sugerenciaEstructura = "Shadow Board / Tablero de Herramientas 5S" }
                         elseif ($fullText -match "poka|fixture") { $sugerenciaEstructura = "Dispositivo Poka-Yoke / Fixture Mecánico" }
-                        elseif ($fullText -match "inspeccion|inspección|calidad") { $sugerenciaEstructura = "Mesa de Inspección de Calidad con Iluminación" }
-                        elseif ($fullText -match "perfil|perfiles|estructura|estructuras") { $sugerenciaEstructura = "Estación de Trabajo / Mesa de Ensamble Ergonómica" }
+                        elseif ($fullText -match "inspecci[oó]n|calidad") { $sugerenciaEstructura = "Mesa de Inspección de Calidad con Iluminación" }
+                        elseif ($fullText -match "perfil|perfiles|extr?u[ck]tura") { $sugerenciaEstructura = "Estación de Trabajo / Mesa de Ensamble Ergonómica" }
 
-                        # Detección de urgencia
+                        # Detección de urgencia (con tolerancia a typos)
                         $prioridadSugerida = $importance
-                        if ($fullText -match "urgente|linea parada|línea parada|emergencia|critico|crítico|paro") {
+                        if ($fullText -match "ur[gj]ente|l[ií]nea\s*parada|emergencia|cr[ií]tico|paro") {
                             $prioridadSugerida = "Crítica"
                         } elseif ($fullText -match "kaizen|npi|asap|pronto|alta") {
                             $prioridadSugerida = "Alta"
@@ -139,8 +146,22 @@ function Get-OutlookMoonshineEmails {
                         elseif ($fullText -match "backend\s*a") { $areaSugerida = "Ensamble Backend A" }
                         elseif ($fullText -match "backend\s*b") { $areaSugerida = "Ensamble Backend B" }
                         elseif ($fullText -match "calidad") { $areaSugerida = "Calidad & NPI" }
-                        elseif ($fullText -match "almacen|almacén") { $areaSugerida = "Almacén de Componentes" }
+                        elseif ($fullText -match "almac[eé]n|kitting") { $areaSugerida = "Almacén de Componentes" }
                         elseif ($fullText -match "pruebas|testing") { $areaSugerida = "Área de Pruebas / Testing" }
+
+                        # Detección de folio y clasificación preliminar
+                        $folioDetectado = ""
+                        $folioMatch = [regex]::Match($fullText, "msh-\d{4}-\d{3}|msh-\d+|msh\d+", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                        if ($folioMatch.Success) {
+                            $folioDetectado = $folioMatch.Value.ToUpper()
+                        }
+
+                        $categoriaDetectada = "NUEVO_PEDIDO"
+                        if ($folioDetectado -ne "" -or ($fullText -match "estatus|status|avance|c[oó]mo va|cu[aá]ndo queda|cu[aá]ndo entregan|fecha de entrega|seguimiento")) {
+                            $categoriaDetectada = "ESTATUS_TICKET"
+                        } elseif ($fullText -match "hazme|ocupa|ap[oó]yame|ayuda|urge|podr[ií]an" -and (-not ($fullText -match "plano|croquis|medidas|especificaci[oó]n|solicitud formal"))) {
+                            $categoriaDetectada = "SIN_TICKET"
+                        }
                         
                         $palabrasTexto = ($matchedWords | Select-Object -Unique) -join ", "
                         
@@ -151,12 +172,14 @@ function Get-OutlookMoonshineEmails {
                             senderEmail = $senderEmail
                             receivedTime = $received
                             preview = $preview
-                            body = if ($body.Length -gt 1500) { $body.Substring(0, 1500) } else { $body }
+                            body = if ($body.Length -gt 2000) { $body.Substring(0, 2000) } else { $body }
                             importance = $importance
                             sugerenciaEstructura = $sugerenciaEstructura
                             prioridadSugerida = $prioridadSugerida
                             areaSugerida = $areaSugerida
                             palabrasDetectadas = $palabrasTexto
+                            categoriaDetectada = $categoriaDetectada
+                            folioDetectado = $folioDetectado
                         }
                     }
                 } catch {}
@@ -246,7 +269,7 @@ try {
         # API: Escaneo de Outlook en tiempo real
         # =======================================================
         if ($localPath -eq "/api/scan-outlook") {
-            $defaultKeywords = @("moonshine", "estructuras", "estructura", "mesas", "mesa", "carritos", "carrito", "carro", "carros", "racks", "rack", "estaciones", "estacion", "estación", "perfil", "perfiles")
+            $defaultKeywords = @("moonshine", "estructuras", "estructura", "extructura", "extructuras", "mesas", "mesa", "carritos", "carrito", "carito", "carro", "carros", "racks", "rack", "rak", "estaciones", "estacion", "estación", "estasion", "perfil", "perfiles", "correo", "correos", "email", "solicitud", "solicitudes", "pedido", "pedidos", "ticket", "tickets", "tiket", "msh", "urgente", "urjente", "ensamble", "ensanble")
             $keywordsList = $defaultKeywords
             if ($request.QueryString["keyword"]) {
                 $rawParam = [System.Web.HttpUtility]::UrlDecode($request.QueryString["keyword"])
@@ -256,7 +279,7 @@ try {
                     $keywordsList = $splitKws
                 }
             }
-            $limit = 20
+            $limit = 25
             if ($request.QueryString["limit"]) {
                 [int]::TryParse($request.QueryString["limit"], [ref]$limit) | Out-Null
             }
@@ -265,6 +288,77 @@ try {
             $jsonString = $scanResult | ConvertTo-Json -Depth 5
             $bytes = [System.Text.Encoding]::UTF8.GetBytes($jsonString)
 
+            $response.ContentType = "application/json; charset=utf-8"
+            $response.ContentLength64 = $bytes.Length
+            $response.OutputStream.Write($bytes, 0, $bytes.Length)
+            $response.Close()
+            continue
+        }
+
+        # =======================================================
+        # API: Enviar Respuesta Automática por Outlook
+        # =======================================================
+        if ($localPath -eq "/api/send-reply") {
+            $entryId = $request.QueryString["entryId"]
+            $toEmail = $request.QueryString["to"]
+            $subj = $request.QueryString["subject"]
+            $replyBody = $request.QueryString["body"]
+            
+            # Si viene en el cuerpo de un POST en JSON
+            if ($request.HttpMethod -eq "POST" -and $request.HasEntityBody) {
+                try {
+                    $reader = New-Object System.IO.StreamReader($request.InputStream, [System.Text.Encoding]::UTF8)
+                    $postRaw = $reader.ReadToEnd()
+                    $postObj = $postRaw | ConvertFrom-Json
+                    if ($postObj.entryId) { $entryId = $postObj.entryId }
+                    if ($postObj.to) { $toEmail = $postObj.to }
+                    if ($postObj.subject) { $subj = $postObj.subject }
+                    if ($postObj.body) { $replyBody = $postObj.body }
+                } catch {}
+            }
+
+            $respObj = @{ success = $false; message = "No se recibieron parámetros suficientes." }
+            try {
+                $proc = Get-Process OUTLOOK -ErrorAction SilentlyContinue
+                if (-not $proc) {
+                    $respObj = @{ success = $false; message = "Microsoft Outlook no está abierto actualmente en este equipo para enviar la respuesta." }
+                } else {
+                    $outlook = New-Object -ComObject Outlook.Application
+                    $ns = $outlook.GetNameSpace("MAPI")
+                    
+                    if ($entryId) {
+                        try {
+                            $item = $ns.GetItemFromID($entryId)
+                            if ($item) {
+                                $reply = $item.Reply()
+                                $reply.Body = "$replyBody`n`n--- Mensaje Original ---`n" + $item.Body
+                                $reply.Send()
+                                $respObj = @{ success = $true; message = "Respuesta enviada vía Outlook con éxito." }
+                            } else {
+                                $respObj = @{ success = $false; message = "No se encontró el mensaje original en Outlook." }
+                            }
+                        } catch {
+                            $respObj = @{ success = $false; message = "Error al responder con EntryID: " + $_.Exception.Message }
+                        }
+                    } elseif ($toEmail) {
+                        try {
+                            $mail = $outlook.CreateItem(0) # 0 = olMailItem
+                            $mail.To = $toEmail
+                            $mail.Subject = if ($subj) { $subj } else { "Respuesta: Solicitud Moonshine Flow" }
+                            $mail.Body = $replyBody
+                            $mail.Send()
+                            $respObj = @{ success = $true; message = "Correo enviado vía Outlook a $toEmail." }
+                        } catch {
+                            $respObj = @{ success = $false; message = "Error al crear correo en Outlook: " + $_.Exception.Message }
+                        }
+                    }
+                }
+            } catch {
+                $respObj = @{ success = $false; message = $_.Exception.Message }
+            }
+
+            $jsonString = $respObj | ConvertTo-Json
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($jsonString)
             $response.ContentType = "application/json; charset=utf-8"
             $response.ContentLength64 = $bytes.Length
             $response.OutputStream.Write($bytes, 0, $bytes.Length)

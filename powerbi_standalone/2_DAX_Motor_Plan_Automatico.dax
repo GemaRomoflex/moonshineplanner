@@ -1,0 +1,220 @@
+// =========================================================================================
+// FÓRMULAS DAX - MOTOR AUTOMÁTICO DE PLANIFICACIÓN EN POWER BI (MOONSHINE)
+// =========================================================================================
+// INSTRUCCIONES:
+// En Power BI Desktop, haz clic en tu tabla "Plan_Moonshine" (a la derecha).
+// Para las COLUMNAS (1 a 7): Arriba haz clic en "Nueva columna", pega la fórmula y da Enter.
+// Para las MEDIDAS (8 a 13): Arriba haz clic en "Nueva medida", pega la fórmula y da Enter.
+// =========================================================================================
+
+
+// =========================================================================================
+// BLOQUE A: COLUMNAS CALCULADAS (pegar una por una con el botón "Nueva columna")
+// =========================================================================================
+
+// --- COLUMNA 1: Peso numérico de Prioridad (Para que Urgente vaya primero en la fila) ---
+Prioridad_Peso = 
+SWITCH(
+    Plan_Moonshine[Prioridad],
+    "Crítica", 1,
+    "Alta", 2,
+    "Normal", 3,
+    "Baja", 4,
+    3
+)
+
+
+// --- COLUMNA 2: Clave única de desempate FIFO (Prioridad + Fecha + Folio) ---
+Clave_Ordenamiento_FIFO = 
+VAR EnProcesoPrimero = IF(Plan_Moonshine[Estado] = "En Fabricación", 0, 1)
+VAR PesoPrio = Plan_Moonshine[Prioridad_Peso]
+VAR DiasFecha = INT(Plan_Moonshine[Fecha_Solicitud])
+VAR IdUnico = Plan_Moonshine[ID_SharePoint]
+RETURN
+    (EnProcesoPrimero * 10000000000) +
+    (PesoPrio * 100000000) +
+    (DiasFecha * 1000) +
+    MOD(IdUnico, 1000)
+
+
+// --- COLUMNA 3: Posición en la Fila de Producción (1, 2, 3... solo para pedidos activos) ---
+Posicion_En_Fila = 
+VAR EsActivo = 
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"}
+VAR MiClave = Plan_Moonshine[Clave_Ordenamiento_FIFO]
+RETURN
+IF(
+    NOT(EsActivo),
+    BLANK(),
+    CALCULATE(
+        COUNTROWS(Plan_Moonshine),
+        FILTER(
+            ALL(Plan_Moonshine),
+            Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"} &&
+            Plan_Moonshine[Clave_Ordenamiento_FIFO] <= MiClave
+        )
+    )
+)
+
+
+// --- COLUMNA 4: Horas Acumuladas en la Cola de Taller ---
+Horas_Acumuladas_Cola = 
+VAR MiPosicion = Plan_Moonshine[Posicion_En_Fila]
+RETURN
+IF(
+    ISBLANK(MiPosicion),
+    0,
+    CALCULATE(
+        SUM(Plan_Moonshine[Horas_Estimadas]),
+        FILTER(
+            ALL(Plan_Moonshine),
+            NOT(ISBLANK(Plan_Moonshine[Posicion_En_Fila])) &&
+            Plan_Moonshine[Posicion_En_Fila] <= MiPosicion
+        )
+    )
+)
+
+
+// --- COLUMNA 5: Turno Programado (T1 Matutino, T2 Vespertino, T3 Nocturno) ---
+// Nota: Considera 15 hrs efectivas por turno (2 técnicos x 7.5h = 15h por turno / 45h por día).
+// Si quieres cambiar la capacidad diaria, cambia el 45 y el 15 de aquí abajo.
+Turno_Programado = 
+VAR CapacidadPorTurno = 15.0
+VAR CapacidadDiaria = CapacidadPorTurno * 3
+VAR HorasAcum = Plan_Moonshine[Horas_Acumuladas_Cola]
+VAR HorasEnElDia = MOD(MAX(0, HorasAcum - 0.1), CapacidadDiaria)
+RETURN
+SWITCH(
+    TRUE(),
+    Plan_Moonshine[Estado] = "Listo para Entrega", "✅ Terminado en Taller",
+    Plan_Moonshine[Estado] = "Entregado", "📦 Entregado",
+    ISBLANK(Plan_Moonshine[Posicion_En_Fila]), "—",
+    HorasEnElDia < CapacidadPorTurno, "T1 - Matutino (7:00 AM - 3:00 PM)",
+    HorasEnElDia < (CapacidadPorTurno * 2), "T2 - Vespertino (3:00 PM - 11:00 PM)",
+    "T3 - Nocturno (11:00 PM - 7:00 AM)"
+)
+
+
+// --- COLUMNA 6: Fecha Estimada de Fin de Fabricación ---
+Fecha_Fin_Fabricacion = 
+VAR CapacidadDiaria = 45.0
+VAR DiasParaSalir = INT(DIVIDE(MAX(0, Plan_Moonshine[Horas_Acumuladas_Cola] - 0.1), CapacidadDiaria, 0))
+RETURN
+IF(
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"},
+    TODAY() + DiasParaSalir,
+    Plan_Moonshine[Fecha_Solicitud]
+)
+
+
+// --- COLUMNA 7: Fecha Compromiso de Entrega (+3 Días de Holgura) ---
+Fecha_Compromiso_Entrega = 
+VAR DiasHolgura = 3
+RETURN
+SWITCH(
+    TRUE(),
+    Plan_Moonshine[Estado] = "Listo para Entrega", TODAY(),
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"}, Plan_Moonshine[Fecha_Fin_Fabricacion] + DiasHolgura,
+    Plan_Moonshine[Fecha_Solicitud] + DiasHolgura
+)
+
+
+// =========================================================================================
+// BLOQUE B: MEDIDAS PARA TARJETAS KPI Y VISUAL HTML (pegar con el botón "Nueva medida")
+// =========================================================================================
+
+// --- MEDIDA 8: Total de Solicitudes Pendientes (En Fila + En Fabricación) ---
+KPI_Total_Pendientes = 
+CALCULATE(
+    COUNTROWS(Plan_Moonshine),
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"}
+)
+
+// --- MEDIDA 9: Pendientes de Estructuras Nuevas (PowerApp 1) ---
+KPI_Estructuras_Pendientes = 
+CALCULATE(
+    COUNTROWS(Plan_Moonshine),
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"},
+    Plan_Moonshine[Origen_Lista] = "PowerApp Estructuras"
+)
+
+// --- MEDIDA 10: Pendientes de Mantenimientos / Extra (PowerApp 2) ---
+KPI_Mantenimientos_Pendientes = 
+CALCULATE(
+    COUNTROWS(Plan_Moonshine),
+    Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"},
+    Plan_Moonshine[Origen_Lista] = "PowerApp Mantenimientos"
+)
+
+// --- MEDIDA 11: Total de Horas de Carga en Taller (Backlog en Horas) ---
+KPI_Horas_En_Cola = 
+COALESCE(
+    CALCULATE(
+        SUM(Plan_Moonshine[Horas_Estimadas]),
+        Plan_Moonshine[Estado] IN {"Programado", "En Fabricación"}
+    ),
+    0
+)
+
+// --- MEDIDA 12: Pedidos Listos para Entrega Inmediata ---
+KPI_Listos_Para_Entrega = 
+COALESCE(
+    CALCULATE(
+        COUNTROWS(Plan_Moonshine),
+        Plan_Moonshine[Estado] = "Listo para Entrega"
+    ),
+    0
+)
+
+// --- MEDIDA 13 (OPCIONAL): Tablero HTML del Plan Maestro (Para el visual gratuito "HTML Content") ---
+Vista_HTML_Plan_Moonshine = 
+VAR PedidosActivos = 
+    FILTER(
+        Plan_Moonshine,
+        Plan_Moonshine[Estado] IN {"Listo para Entrega", "En Fabricación", "Programado"}
+    )
+VAR FilasHTML = 
+    CONCATENATEX(
+        PedidosActivos,
+        VAR ColorPrio = 
+            SWITCH(
+                Plan_Moonshine[Prioridad],
+                "Crítica", "#dc2626",
+                "Alta", "#ea580c",
+                "Normal", "#2563eb",
+                "#64748b"
+            )
+        VAR ColorOrigen = 
+            IF(Plan_Moonshine[Origen_Lista] = "PowerApp Estructuras", "#0f172a", "#7c3aed")
+        VAR FechaCompromisoTxt = FORMAT(Plan_Moonshine[Fecha_Compromiso_Entrega], "dd/MMM/yyyy")
+        RETURN
+        "<tr style='border-bottom:1px solid #e2e8f0;font-family:Segoe UI,sans-serif;font-size:12px;'>" &
+            "<td style='padding:8px 10px;font-weight:800;color:#1e293b;text-align:center;'>#" & COALESCE(FORMAT(Plan_Moonshine[Posicion_En_Fila], "0"), "✓") & "</td>" &
+            "<td style='padding:8px 10px;font-family:Consolas,monospace;font-weight:700;'>" & Plan_Moonshine[Folio] & "</td>" &
+            "<td style='padding:8px 10px;'><span style='background:" & ColorOrigen & ";color:#fff;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;'>" & Plan_Moonshine[Tipo_Trabajo] & "</span></td>" &
+            "<td style='padding:8px 10px;'><b>" & Plan_Moonshine[Solicitante] & "</b><br><span style='color:#64748b;font-size:11px;'>" & Plan_Moonshine[Area] & "</span></td>" &
+            "<td style='padding:8px 10px;'><b>" & Plan_Moonshine[Estructura_o_Trabajo] & "</b><br><span style='color:#64748b;font-size:11px;'>Cant: " & Plan_Moonshine[Cantidad] & " | " & Plan_Moonshine[Horas_Estimadas] & " hrs</span></td>" &
+            "<td style='padding:8px 10px;text-align:center;'><span style='background:" & ColorPrio & ";color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;'>" & Plan_Moonshine[Prioridad] & "</span></td>" &
+            "<td style='padding:8px 10px;font-size:11px;color:#334155;'>" & Plan_Moonshine[Turno_Programado] & "<br><span style='color:#64748b;'>" & Plan_Moonshine[Especialidad_Requerida] & "</span></td>" &
+            "<td style='padding:8px 10px;background:#f0fdf4;font-weight:800;color:#14532d;border-left:3px solid #16a34a;'>📅 " & FechaCompromisoTxt & "</td>" &
+        "</tr>",
+        "",
+        Plan_Moonshine[Posicion_En_Fila],
+        ASC
+    )
+RETURN
+"<div style='font-family:Segoe UI,sans-serif;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;'>" &
+    "<table style='width:100%;border-collapse:collapse;'>" &
+        "<thead><tr style='background:#0f172a;color:#ffffff;font-size:11px;text-transform:uppercase;'>" &
+            "<th style='padding:10px;'>Fila</th>" &
+            "<th style='padding:10px;text-align:left;'>Folio</th>" &
+            "<th style='padding:10px;text-align:left;'>Origen</th>" &
+            "<th style='padding:10px;text-align:left;'>Solicitante / Área</th>" &
+            "<th style='padding:10px;text-align:left;'>Estructura / Trabajo</th>" &
+            "<th style='padding:10px;'>Prioridad</th>" &
+            "<th style='padding:10px;text-align:left;'>Turno y Equipo</th>" &
+            "<th style='padding:10px;text-align:left;'>Fecha Entrega (+3d)</th>" &
+        "</tr></thead>" &
+        "<tbody>" & FilasHTML & "</tbody>" &
+    "</table>" &
+"</div>"
